@@ -1,9 +1,11 @@
 import type { Piece } from './pieces';
 
+export const TRAY_SIZE = 3;
+
 export function createTray(): HTMLElement {
   const tray = document.createElement('div');
   tray.className = 'tray';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < TRAY_SIZE; i++) {
     const slot = document.createElement('div');
     slot.className = 'tray__slot';
     slot.dataset['slotIndex'] = String(i);
