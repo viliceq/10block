@@ -1,4 +1,4 @@
-export const BOARD_SIZE = 10;
+import { BOARD_SIZE } from './engine';
 
 export function createBoard(): HTMLElement {
   const board = document.createElement('div');

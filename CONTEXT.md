@@ -20,3 +20,7 @@ The vocabulary used in `SPEC.md`, code, tests, commit messages, and ADRs. Keep t
 | **Preview** | The highlighted cells showing where a dragged piece would land. States: `preview-ok` / `preview-bad`. |
 | **HUD** | Score readout and combo indicator at the top of the screen. |
 | **Token** | A CSS custom property defined in `src/styles/tokens.css`. |
+| **BoardState** | Pure-data representation of the board: a 10×10 grid of `CellState`. Indexed `board[row][col]`. Lives in `src/engine.ts`. |
+| **CellState** | Value of a single board cell: `null` (empty) or a `PieceFamily` (filled, carrying that family's colour). |
+| **Anchor** | The `(row, col)` where a piece's bounding-box origin `(0, 0)` lands on the board. Piece cell `(r, c)` therefore lands at `(anchorRow + r, anchorCol + c)`. |
+| **canPlace** | Pure predicate: returns whether a piece fits at a given anchor on a given board (all landing cells in-bounds and empty). |
