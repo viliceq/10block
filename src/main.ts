@@ -1,6 +1,8 @@
-import { VERSION } from './version';
+import './styles/tokens.css';
+import './styles/board.css';
+import { createBoard } from './board';
 
 const app = document.getElementById('app');
 if (app) {
-  app.textContent = `Blockly ${VERSION}`;
+  app.appendChild(createBoard());
 }

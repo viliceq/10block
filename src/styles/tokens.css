@@ -1,0 +1,30 @@
+:root {
+  /* layout */
+  --cell-size: 64px;
+  --cell-gap: 4px;
+  --board-pad: 12px;
+  --screen-pad: 24px;
+  --radius: 6px;
+
+  /* motion */
+  --anim-duration: 180ms;
+  --anim-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Modern Dark palette — surfaces */
+  --color-bg:         #0F172A;
+  --color-board:      #1E293B;
+  --color-cell-empty: #334155;
+  --color-text:       #F1F5F9;
+
+  /* Modern Dark palette — piece families */
+  --color-piece-single: #38BDF8; /* sky    — Single */
+  --color-piece-line:   #4ADE80; /* green  — all line pieces */
+  --color-piece-sq2:    #F97316; /* orange — 2×2 square */
+  --color-piece-sq3:    #A78BFA; /* violet — 3×3 square */
+  --color-piece-l2:     #FACC15; /* yellow — small L corners */
+  --color-piece-l3:     #F472B6; /* pink   — big L corners */
+
+  /* preview states */
+  --color-preview-ok:  rgba(74, 222, 128, 0.35);
+  --color-preview-bad: rgba(244, 63, 94, 0.35);
+}
