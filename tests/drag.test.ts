@@ -236,3 +236,172 @@ describe('createDrag — destroy', () => {
     expect(document.body.querySelector('.ghost')).toBeNull();
   });
 });
+
+function countCells(h: Harness, state: string): number {
+  return h.boardEl.querySelectorAll(`.board__cell[data-state="${state}"]`).length;
+}
+
+function findBadAnchor(
+  game: GameApi,
+  pieceIndex: number,
+): { row: number; col: number } {
+  const piece = game.trayPieces[pieceIndex];
+  if (!piece) throw new Error(`no piece in slot ${pieceIndex}`);
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      if (!canPlace(game.boardState, piece, r, c)) return { row: r, col: c };
+    }
+  }
+  throw new Error('no illegal anchor found');
+}
+
+describe('createDrag — preview', () => {
+  it('shows preview-ok on every piece cell at a legal anchor', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([boardCell(h, 3, 3)]);
+
+    pdown(slot(h, 0));
+    pmove({ clientX: 100, clientY: 100 });
+
+    expect(countCells(h, 'preview-ok')).toBe(piece.cells.length);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+    for (const [r, c] of piece.cells) {
+      expect(boardCell(h, 3 + r, 3 + c).dataset['state']).toBe('preview-ok');
+    }
+  });
+
+  it('shows preview-bad when canPlace returns false', () => {
+    const h = setup();
+    h.game.place(0, 0, 0);
+    const bad = findBadAnchor(h.game, 1);
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, bad.row, bad.col),
+    ]);
+
+    pdown(slot(h, 1));
+    pmove();
+
+    expect(countCells(h, 'preview-bad')).toBeGreaterThan(0);
+    expect(countCells(h, 'preview-ok')).toBe(0);
+  });
+
+  it('only previews in-bounds cells near the edge', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([boardCell(h, 9, 9)]);
+
+    pdown(slot(h, 0));
+    pmove();
+
+    const inBoundsCount = piece.cells.filter(
+      ([r, c]) => 9 + r < 10 && 9 + c < 10,
+    ).length;
+    const previewCount =
+      countCells(h, 'preview-ok') + countCells(h, 'preview-bad');
+    expect(previewCount).toBe(inBoundsCount);
+  });
+
+  it('clears preview when the pointer moves off-board', () => {
+    const h = setup();
+    let nextHit: Element[] = [boardCell(h, 3, 3)];
+    vi.spyOn(document, 'elementsFromPoint').mockImplementation(() => nextHit);
+
+    pdown(slot(h, 0));
+    pmove();
+    expect(
+      countCells(h, 'preview-ok') + countCells(h, 'preview-bad'),
+    ).toBeGreaterThan(0);
+
+    nextHit = [];
+    pmove();
+    expect(countCells(h, 'preview-ok')).toBe(0);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+  });
+
+  it('clears prior preview between successive moves', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+
+    let nextHit: Element[] = [boardCell(h, 3, 3)];
+    vi.spyOn(document, 'elementsFromPoint').mockImplementation(() => nextHit);
+
+    pdown(slot(h, 0));
+    pmove();
+
+    nextHit = [boardCell(h, 5, 5)];
+    pmove();
+
+    for (const [r, c] of piece.cells) {
+      // Cells from the second move carry preview-ok.
+      expect(boardCell(h, 5 + r, 5 + c).dataset['state']).toBe('preview-ok');
+      // Cells from the first move are restored to empty (anchors differ, so coords differ).
+      expect(boardCell(h, 3 + r, 3 + c).dataset['state']).toBe('empty');
+    }
+  });
+
+  it('clears preview on a legal drop', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, 0, 0),
+    ]);
+    pdown(slot(h, 0));
+    pmove();
+    expect(countCells(h, 'preview-ok')).toBe(piece.cells.length);
+    pup();
+    expect(countCells(h, 'preview-ok')).toBe(0);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+  });
+
+  it('clears preview on an illegal drop', () => {
+    const h = setup();
+    h.game.place(0, 0, 0);
+    const bad = findBadAnchor(h.game, 1);
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, bad.row, bad.col),
+    ]);
+    pdown(slot(h, 1));
+    pmove();
+    expect(countCells(h, 'preview-bad')).toBeGreaterThan(0);
+    pup();
+    expect(countCells(h, 'preview-ok')).toBe(0);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+  });
+
+  it('clears preview on pointercancel', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, 3, 3),
+    ]);
+    pdown(slot(h, 0));
+    pmove();
+    expect(countCells(h, 'preview-ok')).toBe(piece.cells.length);
+    pcancel();
+    expect(countCells(h, 'preview-ok')).toBe(0);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+  });
+
+  it('clears preview on destroy mid-drag', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, 3, 3),
+    ]);
+    pdown(slot(h, 0));
+    pmove();
+    expect(countCells(h, 'preview-ok')).toBe(piece.cells.length);
+    h.drag.destroy();
+    expect(countCells(h, 'preview-ok')).toBe(0);
+    expect(countCells(h, 'preview-bad')).toBe(0);
+  });
+});

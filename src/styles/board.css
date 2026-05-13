@@ -35,6 +35,14 @@ body {
   background: var(--piece-color);
 }
 
+.board__cell[data-state='preview-ok'] {
+  background: var(--color-preview-ok);
+}
+
+.board__cell[data-state='preview-bad'] {
+  background: var(--color-preview-bad);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

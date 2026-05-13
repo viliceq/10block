@@ -1,6 +1,7 @@
 import type { GameApi } from './game';
 import type { Piece } from './pieces';
-import { canPlace } from './engine';
+import { canPlace, BOARD_SIZE } from './engine';
+import { renderBoardState } from './board';
 
 export type DragApi = {
   destroy(): void;
@@ -16,7 +17,7 @@ type ActiveDrag = {
 export function createDrag(
   game: GameApi,
   trayEl: HTMLElement,
-  _boardEl: HTMLElement,
+  boardEl: HTMLElement,
 ): DragApi {
   let active: ActiveDrag | null = null;
 
@@ -48,21 +49,54 @@ export function createDrag(
   function onPointerMove(e: PointerEvent): void {
     if (!active || e.pointerId !== active.pointerId) return;
     positionGhost(active.ghost, e.clientX, e.clientY);
+    updatePreview(e.clientX, e.clientY);
+  }
+
+  function updatePreview(x: number, y: number): void {
+    if (!active) return;
+    // Re-render canonical engine state so any prior preview is wiped.
+    renderBoardState(boardEl, game.boardState);
+
+    const target = findBoardCell(x, y);
+    if (!target) return;
+
+    const piece = game.trayPieces[active.slotIndex];
+    if (!piece) return;
+
+    const ok = canPlace(game.boardState, piece, target.row, target.col);
+    const state = ok ? 'preview-ok' : 'preview-bad';
+
+    for (const [r, c] of piece.cells) {
+      const row = target.row + r;
+      const col = target.col + c;
+      if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) continue;
+      const cellEl = boardEl.querySelector<HTMLElement>(
+        `.board__cell[data-row="${row}"][data-col="${col}"]`,
+      );
+      if (cellEl) cellEl.dataset['state'] = state;
+    }
+  }
+
+  function clearPreview(): void {
+    renderBoardState(boardEl, game.boardState);
   }
 
   function finishDrag(release: { x: number; y: number; place: boolean }): void {
     if (!active) return;
     const { slotIndex, slot, ghost } = active;
 
+    let placed = false;
     if (release.place) {
       const piece = game.trayPieces[slotIndex];
       if (piece) {
         const cell = findBoardCell(release.x, release.y);
         if (cell && canPlace(game.boardState, piece, cell.row, cell.col)) {
           game.place(slotIndex, cell.row, cell.col);
+          placed = true; // game.place re-rendered; preview already gone.
         }
       }
     }
+    if (!placed) clearPreview();
 
     ghost.remove();
     slot.removeAttribute('data-picked');
@@ -92,6 +126,7 @@ export function createDrag(
     if (active) {
       active.ghost.remove();
       active.slot.removeAttribute('data-picked');
+      clearPreview();
       active = null;
     }
   }
