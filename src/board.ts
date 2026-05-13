@@ -1,4 +1,4 @@
-import { BOARD_SIZE } from './engine';
+import { BOARD_SIZE, type BoardState } from './engine';
 
 export function createBoard(): HTMLElement {
   const board = document.createElement('div');
@@ -16,4 +16,23 @@ export function createBoard(): HTMLElement {
   }
 
   return board;
+}
+
+export function renderBoardState(
+  boardElement: HTMLElement,
+  state: BoardState,
+): void {
+  const cells = boardElement.querySelectorAll<HTMLElement>('.board__cell');
+  for (const cell of cells) {
+    const row = Number(cell.dataset['row']);
+    const col = Number(cell.dataset['col']);
+    const value = state[row]?.[col] ?? null;
+    if (value === null) {
+      cell.dataset['state'] = 'empty';
+      cell.style.removeProperty('--piece-color');
+    } else {
+      cell.dataset['state'] = 'filled';
+      cell.style.setProperty('--piece-color', `var(--color-piece-${value})`);
+    }
+  }
 }

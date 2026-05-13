@@ -31,6 +31,10 @@ body {
   border-radius: var(--radius);
 }
 
+.board__cell[data-state='filled'] {
+  background: var(--piece-color);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
