@@ -1,6 +1,7 @@
 import {
   applyPlacement,
   createEmptyBoard,
+  resolveClears,
   type BoardState,
 } from './engine';
 import { samplePiece, type Piece } from './pieces';
@@ -65,7 +66,8 @@ export function createGame(options: GameOptions = {}): GameApi {
     if (!piece) {
       throw new Error(`place: slot ${slotIndex} is already empty`);
     }
-    board = applyPlacement(board, piece, anchorRow, anchorCol);
+    const placed = applyPlacement(board, piece, anchorRow, anchorCol);
+    board = resolveClears(placed).board;
     tray[slotIndex] = null;
     if (tray.every((p) => p === null)) {
       refillTray();

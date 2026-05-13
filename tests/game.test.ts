@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, TRAY_SIZE, type GameApi } from '../src/game';
-import { CATALOG } from '../src/pieces';
+import { CATALOG, samplePiece } from '../src/pieces';
 import { canPlace } from '../src/engine';
 
 function mulberry32(seed: number): () => number {
@@ -26,6 +26,22 @@ function findSafeAnchor(game: GameApi, slotIndex: number): readonly [number, num
     }
   }
   throw new Error(`no legal anchor for piece in slot ${slotIndex}`);
+}
+
+/** Brute-force a deterministic seed whose first TRAY_SIZE sampled pieces match
+ *  `predicate`. Replays `samplePiece` directly (no Game construction) so the
+ *  search is fast. */
+function findSeedWithPieces(
+  predicate: (ids: ReadonlyArray<string>) => boolean,
+  limit = 5000,
+): number {
+  for (let seed = 1; seed < limit; seed++) {
+    const rng = mulberry32(seed);
+    const ids: string[] = [];
+    for (let i = 0; i < TRAY_SIZE; i++) ids.push(samplePiece(rng).id);
+    if (predicate(ids)) return seed;
+  }
+  throw new Error(`no seed found within ${limit} tries`);
 }
 
 describe('createGame() — construction', () => {
@@ -153,6 +169,83 @@ describe('place() — rejections', () => {
     const game = createGame({ rng: mulberry32(1) });
     game.mount(document.createElement('div'));
     expect(() => game.place(0, 10, 10)).toThrow();
+  });
+});
+
+describe('place() — clears', () => {
+  it('clears a completed row from boardState and DOM', () => {
+    const seed = findSeedWithPieces(
+      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+    );
+    const game = createGame({ rng: mulberry32(seed) });
+    const root = document.createElement('div');
+    game.mount(root);
+
+    game.place(0, 0, 0); // fills (0,0)..(0,4)
+    game.place(1, 0, 5); // fills (0,5)..(0,9) — row 0 now full and cleared
+
+    for (let c = 0; c < 10; c++) {
+      expect(game.boardState[0]?.[c]).toBeNull();
+    }
+
+    const cells = root.querySelectorAll<HTMLElement>(
+      '.board__cell[data-row="0"]',
+    );
+    expect(cells.length).toBe(10);
+    for (const cell of cells) {
+      expect(cell.dataset['state']).toBe('empty');
+      expect(cell.style.getPropertyValue('--piece-color')).toBe('');
+    }
+  });
+
+  it('does not clear when no row or column is complete', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    game.mount(document.createElement('div'));
+    const piece = game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+
+    game.place(0, 0, 0);
+
+    for (const [r, c] of piece.cells) {
+      expect(game.boardState[r]?.[c]).toBe(piece.family);
+    }
+  });
+
+  it('respects refill timing after a clearing placement', () => {
+    const seed = findSeedWithPieces(
+      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+    );
+    const game = createGame({ rng: mulberry32(seed) });
+    game.mount(document.createElement('div'));
+
+    const piece2Before = game.trayPieces[2];
+    if (!piece2Before) throw new Error('no piece in slot 2');
+
+    game.place(0, 0, 0);
+    game.place(1, 0, 5); // clears row 0 — slot 2 still has its piece
+
+    expect(game.trayPieces[0]).toBeNull();
+    expect(game.trayPieces[1]).toBeNull();
+    expect(game.trayPieces[2]?.id).toBe(piece2Before.id);
+  });
+});
+
+describe('place() — illegal placements preserve state', () => {
+  it('does not mutate board, tray, or DOM when placement throws', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    const root = document.createElement('div');
+    game.mount(root);
+
+    const boardBefore = JSON.parse(JSON.stringify(game.boardState));
+    const trayBefore = game.trayPieces.map((p) => p?.id ?? null);
+
+    expect(() => game.place(0, 10, 10)).toThrow();
+
+    expect(JSON.parse(JSON.stringify(game.boardState))).toEqual(boardBefore);
+    expect(game.trayPieces.map((p) => p?.id ?? null)).toEqual(trayBefore);
+    expect(
+      root.querySelectorAll('.board__cell[data-state="filled"]').length,
+    ).toBe(0);
   });
 });
 
