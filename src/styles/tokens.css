@@ -6,6 +6,10 @@
   --screen-pad: 24px;
   --radius: 6px;
 
+  /* tray sizing — pieces are drawn at a smaller scale than the board */
+  --tray-cell-size: 28px;
+  --tray-slot-size: 168px;
+
   /* motion */
   --anim-duration: 180ms;
   --anim-easing: cubic-bezier(0.2, 0.8, 0.2, 1);

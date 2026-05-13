@@ -50,7 +50,19 @@ describe('tokens.css — layout tokens', () => {
     expect(tokens).toMatch(/--cell-gap\s*:/);
   });
 
+  it('declares the tray-cell-size token', () => {
+    expect(tokens).toMatch(/--tray-cell-size\s*:/);
+  });
+
   it('declares the radius token', () => {
     expect(tokens).toMatch(/--radius\s*:/);
+  });
+
+  it('keeps --tray-cell-size smaller than --cell-size', () => {
+    const cell = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
+    const tray = tokens.match(/--tray-cell-size\s*:\s*(\d+)px/i);
+    expect(cell).not.toBeNull();
+    expect(tray).not.toBeNull();
+    expect(Number(tray?.[1])).toBeLessThan(Number(cell?.[1]));
   });
 });
