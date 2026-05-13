@@ -12,7 +12,20 @@ type ActiveDrag = {
   slotIndex: number;
   slot: HTMLElement;
   ghost: HTMLElement;
+  /** Half of `--cell-size` at drag start. The ghost's top-left bbox cell is
+   *  centred on the pointer by subtracting this from clientX/clientY. */
+  pointerOffset: number;
 };
+
+/** Mirrors the iPad default for `--cell-size` in `src/styles/tokens.css`.
+ *  A token-vs-fallback drift test in `tests/tokens.test.ts` keeps these in sync. */
+export const CELL_SIZE_FALLBACK = 64;
+
+function readCellSize(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--cell-size');
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n > 0 ? n : CELL_SIZE_FALLBACK;
+}
 
 export function createDrag(
   game: GameApi,
@@ -32,8 +45,9 @@ export function createDrag(
     const piece = game.trayPieces[slotIndex];
     if (!piece) return;
 
+    const pointerOffset = readCellSize() / 2;
     const ghost = createGhost(piece);
-    positionGhost(ghost, e.clientX, e.clientY);
+    positionGhost(ghost, e.clientX, e.clientY, pointerOffset);
     document.body.appendChild(ghost);
     slot.dataset['picked'] = 'true';
 
@@ -43,12 +57,12 @@ export function createDrag(
       // setPointerCapture may not be supported in some test environments.
     }
 
-    active = { pointerId: e.pointerId, slotIndex, slot, ghost };
+    active = { pointerId: e.pointerId, slotIndex, slot, ghost, pointerOffset };
   }
 
   function onPointerMove(e: PointerEvent): void {
     if (!active || e.pointerId !== active.pointerId) return;
-    positionGhost(active.ghost, e.clientX, e.clientY);
+    positionGhost(active.ghost, e.clientX, e.clientY, active.pointerOffset);
     updatePreview(e.clientX, e.clientY);
   }
 
@@ -150,8 +164,13 @@ function createGhost(piece: Piece): HTMLElement {
   return ghost;
 }
 
-function positionGhost(ghost: HTMLElement, x: number, y: number): void {
-  ghost.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+function positionGhost(
+  ghost: HTMLElement,
+  x: number,
+  y: number,
+  offset: number,
+): void {
+  ghost.style.transform = `translate3d(${x - offset}px, ${y - offset}px, 0)`;
 }
 
 function findBoardCell(x: number, y: number): { row: number; col: number } | null {

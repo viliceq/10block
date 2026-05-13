@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { CELL_SIZE_FALLBACK } from '../src/drag';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const tokensPath = resolve(here, '../src/styles/tokens.css');
@@ -69,5 +70,11 @@ describe('tokens.css — layout tokens', () => {
   it('declares the z-ghost and ghost-opacity tokens', () => {
     expect(tokens).toMatch(/--z-ghost\s*:/);
     expect(tokens).toMatch(/--ghost-opacity\s*:/);
+  });
+
+  it('keeps CELL_SIZE_FALLBACK in drag.ts in sync with --cell-size', () => {
+    const match = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
+    expect(match).not.toBeNull();
+    expect(Number(match?.[1])).toBe(CELL_SIZE_FALLBACK);
   });
 });

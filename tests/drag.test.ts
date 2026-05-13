@@ -137,12 +137,29 @@ describe('createDrag — pickup', () => {
 });
 
 describe('createDrag — motion', () => {
-  it('follows the pointer via transform translate3d', () => {
+  it('follows the pointer via transform translate3d, offset by half a cell', () => {
     const h = setup();
     pdown(slot(h, 0));
     pmove({ clientX: 120, clientY: 80 });
     const ghost = document.body.querySelector<HTMLElement>('.ghost');
-    expect(ghost?.style.transform).toContain('translate3d(120px, 80px, 0');
+    // jsdom returns "" for custom properties; the 64 fallback kicks in, so offset = 32.
+    expect(ghost?.style.transform).toContain('translate3d(88px, 48px, 0');
+  });
+
+  it('centres the pointer on the top-left bbox cell', () => {
+    const h = setup();
+    pdown(slot(h, 0));
+    pmove({ clientX: 100, clientY: 100 });
+    const ghost = document.body.querySelector<HTMLElement>('.ghost');
+    expect(ghost?.style.transform).toContain('translate3d(68px, 68px, 0');
+  });
+
+  it('uses the un-offset pointer position for hit-testing', () => {
+    const h = setup();
+    const spy = vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    pdown(slot(h, 0));
+    pmove({ clientX: 150, clientY: 120 });
+    expect(spy).toHaveBeenCalledWith(150, 120);
   });
 
   it('ignores pointermove with a different pointerId', () => {
