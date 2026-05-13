@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createEmptyBoard,
   canPlace,
+  applyPlacement,
   type BoardState,
   type CellState,
 } from '../src/engine';
@@ -156,5 +157,107 @@ describe('canPlace() — purity', () => {
     }
 
     expect(JSON.parse(JSON.stringify(board))).toEqual(snapshot);
+  });
+});
+
+describe('applyPlacement()', () => {
+  it('returns a different top-level board reference', () => {
+    const before = createEmptyBoard();
+    const after = applyPlacement(before, pieceById('single'), 0, 0);
+    expect(after).not.toBe(before);
+  });
+
+  it('fills the single piece cell with its family', () => {
+    const before = createEmptyBoard();
+    const after = applyPlacement(before, pieceById('single'), 3, 3);
+    expect(after[3]?.[3]).toBe('single');
+  });
+
+  it('fills exactly the cells of a square-2 with its family', () => {
+    const before = createEmptyBoard();
+    const after = applyPlacement(before, pieceById('square-2'), 4, 5);
+    expect(after[4]?.[5]).toBe('sq2');
+    expect(after[4]?.[6]).toBe('sq2');
+    expect(after[5]?.[5]).toBe('sq2');
+    expect(after[5]?.[6]).toBe('sq2');
+  });
+
+  it('only fills piece cells, not bbox holes (l3-ne)', () => {
+    const before = createEmptyBoard();
+    const after = applyPlacement(before, pieceById('l3-ne'), 0, 0);
+    // Piece cells filled.
+    expect(after[0]?.[0]).toBe('l3');
+    expect(after[1]?.[0]).toBe('l3');
+    expect(after[2]?.[0]).toBe('l3');
+    expect(after[2]?.[1]).toBe('l3');
+    expect(after[2]?.[2]).toBe('l3');
+    // Bbox holes left null.
+    expect(after[0]?.[1]).toBeNull();
+    expect(after[0]?.[2]).toBeNull();
+    expect(after[1]?.[1]).toBeNull();
+    expect(after[1]?.[2]).toBeNull();
+  });
+
+  it('leaves cells outside the piece unchanged', () => {
+    const before = withFilled([[9, 9, 'sq3']]);
+    const after = applyPlacement(before, pieceById('single'), 0, 0);
+    expect(after[9]?.[9]).toBe('sq3');
+    expect(after[5]?.[5]).toBeNull();
+  });
+
+  it('does not mutate the input board on a successful placement', () => {
+    const before = withFilled([[7, 7, 'line']]);
+    const snapshot = JSON.parse(JSON.stringify(before));
+    applyPlacement(before, pieceById('square-3'), 0, 0);
+    expect(JSON.parse(JSON.stringify(before))).toEqual(snapshot);
+  });
+
+  it('throws when the placement is out of bounds', () => {
+    const board = createEmptyBoard();
+    expect(() => applyPlacement(board, pieceById('single'), 10, 0)).toThrow();
+    expect(() => applyPlacement(board, pieceById('penta-h'), 0, 6)).toThrow();
+  });
+
+  it('throws when the placement overlaps an existing piece', () => {
+    const board = withFilled([[3, 3, 'single']]);
+    expect(() => applyPlacement(board, pieceById('square-2'), 3, 3)).toThrow();
+  });
+
+  it('throw message contains the piece id and anchor', () => {
+    const board = createEmptyBoard();
+    try {
+      applyPlacement(board, pieceById('penta-h'), 0, 7);
+      expect.fail('expected applyPlacement to throw');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      expect(msg).toMatch(/penta-h/);
+      expect(msg).toMatch(/0/);
+      expect(msg).toMatch(/7/);
+    }
+  });
+
+  it('does not mutate the input board on a thrown placement', () => {
+    const board = withFilled([[3, 3, 'single']]);
+    const snapshot = JSON.parse(JSON.stringify(board));
+    expect(() =>
+      applyPlacement(board, pieceById('square-2'), 3, 3),
+    ).toThrow();
+    expect(JSON.parse(JSON.stringify(board))).toEqual(snapshot);
+  });
+
+  it('composes: two non-overlapping placements both land, no intermediate leakage', () => {
+    const board0 = createEmptyBoard();
+    const board1 = applyPlacement(board0, pieceById('square-2'), 0, 0);
+    const board1Snapshot = JSON.parse(JSON.stringify(board1));
+    const board2 = applyPlacement(board1, pieceById('square-2'), 5, 5);
+
+    // First piece still present in board2.
+    expect(board2[0]?.[0]).toBe('sq2');
+    expect(board2[1]?.[1]).toBe('sq2');
+    // Second piece present.
+    expect(board2[5]?.[5]).toBe('sq2');
+    expect(board2[6]?.[6]).toBe('sq2');
+    // Intermediate board untouched by the second placement (full deep equality).
+    expect(JSON.parse(JSON.stringify(board1))).toEqual(board1Snapshot);
   });
 });
