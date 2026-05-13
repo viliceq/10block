@@ -24,3 +24,4 @@ The vocabulary used in `SPEC.md`, code, tests, commit messages, and ADRs. Keep t
 | **CellState** | Value of a single board cell: `null` (empty) or a `PieceFamily` (filled, carrying that family's colour). |
 | **Anchor** | The `(row, col)` where a piece's bounding-box origin `(0, 0)` lands on the board. Piece cell `(r, c)` therefore lands at `(anchorRow + r, anchorCol + c)`. |
 | **canPlace** | Pure predicate: returns whether a piece fits at a given anchor on a given board (all landing cells in-bounds and empty). |
+| **ClearResult** | The return shape of `resolveClears(board)`: `{ board: BoardState, rowsCleared: ReadonlyArray<number>, colsCleared: ReadonlyArray<number> }`. `rowsCleared.length + colsCleared.length` is **L** in the scoring formula. |

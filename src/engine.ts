@@ -49,3 +49,48 @@ export function applyPlacement(
   }
   return next;
 }
+
+export type ClearResult = {
+  readonly board: BoardState;
+  readonly rowsCleared: ReadonlyArray<number>;
+  readonly colsCleared: ReadonlyArray<number>;
+};
+
+export function resolveClears(board: BoardState): ClearResult {
+  const rowsCleared: number[] = [];
+  const colsCleared: number[] = [];
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    const row = board[r];
+    if (!row) continue;
+    let full = true;
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = row[c];
+      if (cell === null || cell === undefined) {
+        full = false;
+        break;
+      }
+    }
+    if (full) rowsCleared.push(r);
+  }
+
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    let full = true;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      const cell = board[r]?.[c];
+      if (cell === null || cell === undefined) {
+        full = false;
+        break;
+      }
+    }
+    if (full) colsCleared.push(c);
+  }
+
+  const rowSet = new Set(rowsCleared);
+  const colSet = new Set(colsCleared);
+  const next: CellState[][] = board.map((row, r) =>
+    row.map((cell, c) => (rowSet.has(r) || colSet.has(c) ? null : cell)),
+  );
+
+  return { board: next, rowsCleared, colsCleared };
+}

@@ -3,6 +3,7 @@ import {
   createEmptyBoard,
   canPlace,
   applyPlacement,
+  resolveClears,
   type BoardState,
   type CellState,
 } from '../src/engine';
@@ -259,5 +260,129 @@ describe('applyPlacement()', () => {
     expect(board2[6]?.[6]).toBe('sq2');
     // Intermediate board untouched by the second placement (full deep equality).
     expect(JSON.parse(JSON.stringify(board1))).toEqual(board1Snapshot);
+  });
+});
+
+function fillRow(board: BoardState, row: number, family: 'sq2' | 'sq3' | 'l3' | 'line' | 'single' = 'line'): BoardState {
+  const next: CellState[][] = board.map((r) => r.slice());
+  const rowArr = next[row];
+  if (!rowArr) throw new Error(`row ${row} missing`);
+  for (let c = 0; c < 10; c++) rowArr[c] = family;
+  return next;
+}
+
+function fillCol(board: BoardState, col: number, family: 'sq2' | 'sq3' | 'l3' | 'line' | 'single' = 'line'): BoardState {
+  const next: CellState[][] = board.map((r) => r.slice());
+  for (let r = 0; r < 10; r++) {
+    const row = next[r];
+    if (row) row[col] = family;
+  }
+  return next;
+}
+
+function fillEvery(board: BoardState, family: 'sq2' | 'sq3' | 'l3' | 'line' | 'single' = 'sq2'): BoardState {
+  return board.map(() =>
+    Array.from({ length: 10 }, () => family) as CellState[],
+  );
+}
+
+describe('resolveClears()', () => {
+  it('clears nothing on an empty board', () => {
+    const before = createEmptyBoard();
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([]);
+    expect(colsCleared).toEqual([]);
+    expect(JSON.parse(JSON.stringify(board))).toEqual(
+      JSON.parse(JSON.stringify(before)),
+    );
+  });
+
+  it('returns a different top-level board reference even when nothing clears', () => {
+    const before = createEmptyBoard();
+    const { board } = resolveClears(before);
+    expect(board).not.toBe(before);
+  });
+
+  it('clears a single full row', () => {
+    const before = fillRow(createEmptyBoard(), 4, 'line');
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([4]);
+    expect(colsCleared).toEqual([]);
+    for (let c = 0; c < 10; c++) {
+      expect(board[4]?.[c]).toBeNull();
+    }
+    // Other rows remain empty.
+    for (let r = 0; r < 10; r++) {
+      if (r === 4) continue;
+      for (let c = 0; c < 10; c++) {
+        expect(board[r]?.[c]).toBeNull();
+      }
+    }
+  });
+
+  it('clears a single full column', () => {
+    const before = fillCol(createEmptyBoard(), 7, 'sq3');
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([]);
+    expect(colsCleared).toEqual([7]);
+    for (let r = 0; r < 10; r++) {
+      expect(board[r]?.[7]).toBeNull();
+    }
+  });
+
+  it('clears a row and a column simultaneously, intersection nulled once', () => {
+    let before = fillRow(createEmptyBoard(), 2, 'sq2');
+    before = fillCol(before, 5, 'l3');
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([2]);
+    expect(colsCleared).toEqual([5]);
+    // Whole row 2 and whole col 5 are null in the result.
+    for (let c = 0; c < 10; c++) expect(board[2]?.[c]).toBeNull();
+    for (let r = 0; r < 10; r++) expect(board[r]?.[5]).toBeNull();
+    // Cells outside row 2 / col 5 unchanged: empty before, empty after.
+    expect(board[0]?.[0]).toBeNull();
+    expect(board[9]?.[9]).toBeNull();
+  });
+
+  it('clears multiple rows and reports them sorted ascending', () => {
+    let before = fillRow(createEmptyBoard(), 9);
+    before = fillRow(before, 1);
+    before = fillRow(before, 4);
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([1, 4, 9]);
+    expect(colsCleared).toEqual([]);
+    for (const r of [1, 4, 9]) {
+      for (let c = 0; c < 10; c++) expect(board[r]?.[c]).toBeNull();
+    }
+  });
+
+  it('clears multiple columns and reports them sorted ascending', () => {
+    let before = fillCol(createEmptyBoard(), 5);
+    before = fillCol(before, 0);
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([]);
+    expect(colsCleared).toEqual([0, 5]);
+    for (const c of [0, 5]) {
+      for (let r = 0; r < 10; r++) expect(board[r]?.[c]).toBeNull();
+    }
+  });
+
+  it('clears every row and column on a full board (perfect clear)', () => {
+    const before = fillEvery(createEmptyBoard(), 'sq2');
+    const { board, rowsCleared, colsCleared } = resolveClears(before);
+    expect(rowsCleared).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(colsCleared).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    for (const row of board) {
+      for (const cell of row) {
+        expect(cell).toBeNull();
+      }
+    }
+  });
+
+  it('does not mutate the input board', () => {
+    const before = fillRow(createEmptyBoard(), 4, 'line');
+    const snapshot = JSON.parse(JSON.stringify(before));
+    resolveClears(before);
+    expect(JSON.parse(JSON.stringify(before))).toEqual(snapshot);
   });
 });
