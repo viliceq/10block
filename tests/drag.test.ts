@@ -1,0 +1,238 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createDrag, type DragApi } from '../src/drag';
+import { createGame, type GameApi } from '../src/game';
+import { canPlace } from '../src/engine';
+
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let x = Math.imul(t ^ (t >>> 15), 1 | t);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+type Harness = {
+  game: GameApi;
+  trayEl: HTMLElement;
+  boardEl: HTMLElement;
+  drag: DragApi;
+};
+
+function setup(seed = 1): Harness {
+  document.body.innerHTML = '';
+  const root = document.createElement('div');
+  document.body.appendChild(root);
+  const game = createGame({ rng: mulberry32(seed) });
+  game.mount(root);
+  const trayEl = root.querySelector<HTMLElement>('.tray');
+  const boardEl = root.querySelector<HTMLElement>('.board');
+  if (!trayEl || !boardEl) throw new Error('mount failed');
+  const drag = createDrag(game, trayEl, boardEl);
+  return { game, trayEl, boardEl, drag };
+}
+
+function slot(h: Harness, i: number): HTMLElement {
+  const el = h.trayEl.querySelector<HTMLElement>(
+    `.tray__slot[data-slot-index="${i}"]`,
+  );
+  if (!el) throw new Error(`slot ${i} not found`);
+  return el;
+}
+
+function boardCell(h: Harness, r: number, c: number): HTMLElement {
+  const el = h.boardEl.querySelector<HTMLElement>(
+    `.board__cell[data-row="${r}"][data-col="${c}"]`,
+  );
+  if (!el) throw new Error(`cell (${r},${c}) not found`);
+  return el;
+}
+
+function pdown(target: Element, opts: PointerEventInit = {}): void {
+  target.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+      ...opts,
+    }),
+  );
+}
+
+function pmove(opts: PointerEventInit = {}): void {
+  document.dispatchEvent(
+    new PointerEvent('pointermove', {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+      ...opts,
+    }),
+  );
+}
+
+function pup(opts: PointerEventInit = {}): void {
+  document.dispatchEvent(
+    new PointerEvent('pointerup', {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+      ...opts,
+    }),
+  );
+}
+
+function pcancel(opts: PointerEventInit = {}): void {
+  document.dispatchEvent(
+    new PointerEvent('pointercancel', {
+      pointerId: 1,
+      bubbles: true,
+      ...opts,
+    }),
+  );
+}
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+describe('createDrag — pickup', () => {
+  it('creates a ghost and marks the slot when grabbing a filled slot', () => {
+    const h = setup();
+    pdown(slot(h, 0));
+    expect(document.body.querySelector('.ghost')).not.toBeNull();
+    expect(slot(h, 0).dataset['picked']).toBe('true');
+  });
+
+  it("renders the picked piece's cells inside the ghost", () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    pdown(slot(h, 0));
+    const cells = document.body.querySelectorAll('.ghost .ghost__cell');
+    expect(cells.length).toBe(piece.cells.length);
+  });
+
+  it('does nothing when the slot is empty', () => {
+    const h = setup();
+    h.game.place(0, 0, 0);
+    pdown(slot(h, 0));
+    expect(document.body.querySelector('.ghost')).toBeNull();
+    expect(slot(h, 0).dataset['picked']).toBeUndefined();
+  });
+
+  it('ignores a second pointerdown while a drag is active', () => {
+    const h = setup();
+    pdown(slot(h, 0), { pointerId: 1 });
+    pdown(slot(h, 1), { pointerId: 2 });
+    expect(document.body.querySelectorAll('.ghost').length).toBe(1);
+  });
+});
+
+describe('createDrag — motion', () => {
+  it('follows the pointer via transform translate3d', () => {
+    const h = setup();
+    pdown(slot(h, 0));
+    pmove({ clientX: 120, clientY: 80 });
+    const ghost = document.body.querySelector<HTMLElement>('.ghost');
+    expect(ghost?.style.transform).toContain('translate3d(120px, 80px, 0');
+  });
+
+  it('ignores pointermove with a different pointerId', () => {
+    const h = setup();
+    pdown(slot(h, 0), { pointerId: 1 });
+    pmove({ pointerId: 99, clientX: 999, clientY: 999 });
+    const ghost = document.body.querySelector<HTMLElement>('.ghost');
+    expect(ghost?.style.transform ?? '').not.toContain('999');
+  });
+});
+
+describe('createDrag — legal drop', () => {
+  it('calls game.place with the resolved anchor', () => {
+    const h = setup();
+    const target = boardCell(h, 3, 3);
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([target]);
+    const placeSpy = vi.spyOn(h.game, 'place');
+
+    pdown(slot(h, 0));
+    pup({ clientX: 200, clientY: 200 });
+
+    expect(placeSpy).toHaveBeenCalledWith(0, 3, 3);
+    expect(document.body.querySelector('.ghost')).toBeNull();
+    expect(slot(h, 0).dataset['picked']).toBeUndefined();
+  });
+});
+
+describe('createDrag — illegal drop', () => {
+  it('does not place when no board cell is under the pointer', () => {
+    const h = setup();
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    const placeSpy = vi.spyOn(h.game, 'place');
+
+    pdown(slot(h, 0));
+    pup();
+
+    expect(placeSpy).not.toHaveBeenCalled();
+    expect(document.body.querySelector('.ghost')).toBeNull();
+    expect(slot(h, 0).dataset['picked']).toBeUndefined();
+  });
+
+  it('does not place when canPlace returns false', () => {
+    const h = setup();
+    h.game.place(0, 0, 0);
+    const piece1 = h.game.trayPieces[1];
+    if (!piece1) throw new Error('no piece in slot 1');
+
+    let badR = -1;
+    let badC = -1;
+    outer: for (let r = 0; r < 10; r++) {
+      for (let c = 0; c < 10; c++) {
+        if (!canPlace(h.game.boardState, piece1, r, c)) {
+          badR = r;
+          badC = c;
+          break outer;
+        }
+      }
+    }
+    if (badR < 0) throw new Error('could not find an illegal anchor');
+
+    const target = boardCell(h, badR, badC);
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([target]);
+    const placeSpy = vi.spyOn(h.game, 'place');
+
+    pdown(slot(h, 1));
+    pup();
+
+    expect(placeSpy).not.toHaveBeenCalled();
+    expect(document.body.querySelector('.ghost')).toBeNull();
+    expect(slot(h, 1).dataset['picked']).toBeUndefined();
+  });
+});
+
+describe('createDrag — pointercancel', () => {
+  it('cleans up without placing', () => {
+    const h = setup();
+    const placeSpy = vi.spyOn(h.game, 'place');
+    pdown(slot(h, 0));
+    pcancel();
+    expect(placeSpy).not.toHaveBeenCalled();
+    expect(document.body.querySelector('.ghost')).toBeNull();
+    expect(slot(h, 0).dataset['picked']).toBeUndefined();
+  });
+});
+
+describe('createDrag — destroy', () => {
+  it('disables subsequent pickups', () => {
+    const h = setup();
+    h.drag.destroy();
+    pdown(slot(h, 0));
+    expect(document.body.querySelector('.ghost')).toBeNull();
+  });
+});

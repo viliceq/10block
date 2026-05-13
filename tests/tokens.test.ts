@@ -65,4 +65,9 @@ describe('tokens.css — layout tokens', () => {
     expect(tray).not.toBeNull();
     expect(Number(tray?.[1])).toBeLessThan(Number(cell?.[1]));
   });
+
+  it('declares the z-ghost and ghost-opacity tokens', () => {
+    expect(tokens).toMatch(/--z-ghost\s*:/);
+    expect(tokens).toMatch(/--ghost-opacity\s*:/);
+  });
 });

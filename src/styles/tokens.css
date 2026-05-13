@@ -31,4 +31,8 @@
   /* preview states */
   --color-preview-ok:  rgba(74, 222, 128, 0.35);
   --color-preview-bad: rgba(244, 63, 94, 0.35);
+
+  /* drag layer */
+  --z-ghost: 1000;
+  --ghost-opacity: 0.85;
 }
