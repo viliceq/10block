@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHud, renderScore } from '../src/hud';
+import { createHud, renderScore, renderBestScore } from '../src/hud';
 
 describe('createHud()', () => {
   it('returns an HTMLElement with class "hud"', () => {
@@ -37,5 +37,39 @@ describe('renderScore()', () => {
     const hud = createHud();
     renderScore(hud, 999);
     expect(hud.querySelector('.hud__label')?.textContent).toBe('SCORE');
+  });
+});
+
+describe('createHud() — best-score pair', () => {
+  it('contains a .hud__pair--best with label "BEST" and score "0"', () => {
+    const hud = createHud();
+    const bestPair = hud.querySelector<HTMLElement>('.hud__pair--best');
+    expect(bestPair).not.toBeNull();
+    expect(bestPair?.querySelector('.hud__label')?.textContent).toBe('BEST');
+    expect(bestPair?.querySelector('.hud__score')?.textContent).toBe('0');
+  });
+
+  it('contains a .hud__pair--current with label "SCORE" and score "0"', () => {
+    const hud = createHud();
+    const currentPair = hud.querySelector<HTMLElement>('.hud__pair--current');
+    expect(currentPair).not.toBeNull();
+    expect(currentPair?.querySelector('.hud__label')?.textContent).toBe('SCORE');
+    expect(currentPair?.querySelector('.hud__score')?.textContent).toBe('0');
+  });
+});
+
+describe('renderBestScore()', () => {
+  it('updates the best score without touching the current score', () => {
+    const hud = createHud();
+    renderScore(hud, 100);
+    renderBestScore(hud, 540);
+    expect(
+      hud.querySelector<HTMLElement>('.hud__pair--current .hud__score')
+        ?.textContent,
+    ).toBe('100');
+    expect(
+      hud.querySelector<HTMLElement>('.hud__pair--best .hud__score')
+        ?.textContent,
+    ).toBe('540');
   });
 });

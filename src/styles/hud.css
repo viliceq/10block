@@ -1,10 +1,16 @@
 .hud {
   display: grid;
   grid-template-columns: auto auto;
-  align-items: baseline;
-  gap: var(--cell-gap);
+  gap: var(--screen-pad);
   padding: var(--screen-pad);
   color: var(--color-text);
+}
+
+.hud__pair {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: var(--cell-gap);
 }
 
 .hud__label {
@@ -19,4 +25,8 @@
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   line-height: 1;
+}
+
+.hud__pair--best .hud__score {
+  opacity: 0.7;
 }

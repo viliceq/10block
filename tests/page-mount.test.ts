@@ -62,4 +62,11 @@ describe('main.ts entry point', () => {
     expect(overlay).not.toBeNull();
     expect(overlay?.dataset['visible']).toBe('false');
   });
+
+  it('shows the BEST pair with value "0" on first mount', () => {
+    const app = document.getElementById('app');
+    const bestPair = app?.querySelector<HTMLElement>('.hud__pair--best');
+    expect(bestPair).not.toBeNull();
+    expect(bestPair?.querySelector('.hud__score')?.textContent).toBe('0');
+  });
 });

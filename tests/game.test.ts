@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+
+beforeEach(() => {
+  localStorage.clear();
+});
 import { createGame, TRAY_SIZE, type GameApi } from '../src/game';
 import { CATALOG, samplePiece } from '../src/pieces';
 import {
@@ -322,6 +326,125 @@ describe('place() — illegal placements preserve state', () => {
     expect(
       root.querySelectorAll('.board__cell[data-state="filled"]').length,
     ).toBe(0);
+  });
+});
+
+describe('Game — persistence', () => {
+
+  it('starts with bestScore=0 when storage is empty', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    expect(game.bestScore).toBe(0);
+  });
+
+  it('updates and persists bestScore after a higher score is reached', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    game.mount(document.createElement('div'));
+    const piece = game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    game.place(0, 0, 0);
+    expect(game.bestScore).toBe(game.score);
+    expect(localStorage.getItem('blockly:bestScore')).toBe(String(game.score));
+  });
+
+  it('preserves bestScore across newGame()', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    game.mount(document.createElement('div'));
+    game.place(0, 0, 0);
+    const best = game.bestScore;
+    expect(best).toBeGreaterThan(0);
+    game.newGame();
+    expect(game.bestScore).toBe(best);
+    expect(game.score).toBe(0);
+  });
+
+  it('reads persisted bestScore on a fresh createGame', () => {
+    localStorage.setItem('blockly:bestScore', '777');
+    const game = createGame({ rng: mulberry32(1) });
+    expect(game.bestScore).toBe(777);
+  });
+
+  it('resumes from lastGame snapshot on a fresh createGame', () => {
+    const game1 = createGame({ rng: mulberry32(1) });
+    game1.mount(document.createElement('div'));
+    const piece0 = game1.trayPieces[0];
+    if (!piece0) throw new Error('no piece');
+    game1.place(0, 0, 0);
+
+    const expectedScore = game1.score;
+    const expectedBoard = JSON.parse(JSON.stringify(game1.boardState));
+
+    const game2 = createGame({ rng: mulberry32(999) });
+    expect(game2.score).toBe(expectedScore);
+    expect(JSON.parse(JSON.stringify(game2.boardState))).toEqual(expectedBoard);
+    expect(game2.trayPieces[0]).toBeNull();
+  });
+
+  it('does not resume after gameOver (snapshot is cleared)', () => {
+    const game1 = createGame({
+      rng: mulberry32(1),
+      initialBoard: fullBoard(),
+    });
+    expect(game1.gameOver).toBe(true);
+    // gameOver at construction means the snapshot was already cleared (or
+    // never written); a fresh createGame should NOT resume to a locked
+    // state.
+    const game2 = createGame({ rng: mulberry32(1) });
+    expect(game2.gameOver).toBe(false);
+    for (const row of game2.boardState) {
+      for (const cell of row) {
+        expect(cell).toBeNull();
+      }
+    }
+  });
+
+  it('clears the snapshot on newGame()', () => {
+    const game1 = createGame({ rng: mulberry32(1) });
+    game1.mount(document.createElement('div'));
+    game1.place(0, 0, 0);
+    expect(localStorage.getItem('blockly:lastGame')).not.toBeNull();
+
+    game1.newGame();
+    expect(localStorage.getItem('blockly:lastGame')).toBeNull();
+
+    const game2 = createGame({ rng: mulberry32(1) });
+    for (const row of game2.boardState) {
+      for (const cell of row) {
+        expect(cell).toBeNull();
+      }
+    }
+  });
+
+  it('drops unknown trayIds to null when resuming (catalog drift)', () => {
+    // Hand-craft a snapshot containing one piece id that is not in the
+    // catalog. The corresponding slot should resume as null.
+    localStorage.setItem(
+      'blockly:lastGame',
+      JSON.stringify({
+        board: Array.from({ length: 10 }, () =>
+          Array.from({ length: 10 }, () => null),
+        ),
+        trayIds: ['single', 'not-a-piece', 'penta-h'],
+        score: 0,
+        streak: 0,
+      }),
+    );
+    const game = createGame({ rng: mulberry32(1) });
+    expect(game.trayPieces[0]?.id).toBe('single');
+    expect(game.trayPieces[1]).toBeNull();
+    expect(game.trayPieces[2]?.id).toBe('penta-h');
+  });
+
+  it('skips resume when an explicit initialBoard is provided', () => {
+    const game1 = createGame({ rng: mulberry32(1) });
+    game1.mount(document.createElement('div'));
+    game1.place(0, 0, 0);
+    expect(localStorage.getItem('blockly:lastGame')).not.toBeNull();
+
+    const game2 = createGame({
+      rng: mulberry32(1),
+      initialBoard: fullBoard(),
+    });
+    expect(game2.gameOver).toBe(true);
   });
 });
 

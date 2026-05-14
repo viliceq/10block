@@ -7,11 +7,18 @@ import {
   streakMultiplier,
   type BoardState,
 } from './engine';
-import { samplePiece, type Piece } from './pieces';
+import { findPieceById, samplePiece, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
-import { createHud, renderScore } from './hud';
+import { createHud, renderBestScore, renderScore } from './hud';
 import { createOverlay, renderOverlay } from './overlay';
+import {
+  clearLastGame,
+  loadBestScore,
+  loadLastGame,
+  saveBestScore,
+  saveLastGame,
+} from './storage';
 
 export { TRAY_SIZE };
 
@@ -28,6 +35,7 @@ export type GameApi = {
   readonly trayPieces: ReadonlyArray<Piece | null>;
   readonly score: number;
   readonly streak: number;
+  readonly bestScore: number;
   readonly gameOver: boolean;
 };
 
@@ -48,6 +56,7 @@ export function createGame(options: GameOptions = {}): GameApi {
   let tray: Array<Piece | null> = [];
   let score = 0;
   let streak = 0;
+  let bestScore = loadBestScore();
   let gameOver = false;
   const boardEl = createBoard();
   const trayEl = createTray();
@@ -62,8 +71,18 @@ export function createGame(options: GameOptions = {}): GameApi {
     gameOver = !hasAnyLegalPlacement(board, tray);
   }
 
+  function persistSnapshot(): void {
+    saveLastGame({
+      board,
+      trayIds: tray.map((p) => p?.id ?? null),
+      score,
+      streak,
+    });
+  }
+
   function render(): void {
     renderScore(hudEl, score);
+    renderBestScore(hudEl, bestScore);
     renderBoardState(boardEl, board);
     const slots = trayEl.querySelectorAll<HTMLElement>('.tray__slot');
     for (let i = 0; i < slots.length; i++) {
@@ -80,7 +99,23 @@ export function createGame(options: GameOptions = {}): GameApi {
     renderOverlay(overlayEl, { visible: gameOver, score });
   }
 
-  refillTray();
+  // Initial state: prefer initialBoard; otherwise try to resume a snapshot;
+  // otherwise start fresh with a refilled tray.
+  if (options.initialBoard) {
+    refillTray();
+  } else {
+    const snapshot = loadLastGame();
+    if (snapshot) {
+      board = snapshot.board;
+      score = snapshot.score;
+      streak = snapshot.streak;
+      tray = snapshot.trayIds.map((id) =>
+        id === null ? null : findPieceById(id) ?? null,
+      );
+    } else {
+      refillTray();
+    }
+  }
   updateGameOver();
   render();
 
@@ -127,6 +162,17 @@ export function createGame(options: GameOptions = {}): GameApi {
       refillTray();
     }
     updateGameOver();
+
+    if (score > bestScore) {
+      bestScore = score;
+      saveBestScore(bestScore);
+    }
+    if (gameOver) {
+      clearLastGame();
+    } else {
+      persistSnapshot();
+    }
+
     render();
   }
 
@@ -136,6 +182,7 @@ export function createGame(options: GameOptions = {}): GameApi {
     streak = 0;
     refillTray();
     updateGameOver();
+    clearLastGame();
     render();
   }
 
@@ -154,6 +201,9 @@ export function createGame(options: GameOptions = {}): GameApi {
     },
     get streak() {
       return streak;
+    },
+    get bestScore() {
+      return bestScore;
     },
     get gameOver() {
       return gameOver;

@@ -65,3 +65,7 @@ export function samplePiece(rng: () => number): Piece {
   }
   return piece;
 }
+
+export function findPieceById(id: string): Piece | undefined {
+  return CATALOG.find((p) => p.id === id);
+}

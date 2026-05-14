@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { CATALOG, type Piece, type PieceFamily } from '../src/pieces';
+import {
+  CATALOG,
+  findPieceById,
+  type Piece,
+  type PieceFamily,
+} from '../src/pieces';
 
 const expectedIds = [
   'single',
@@ -115,6 +120,18 @@ describe('CATALOG — family + size invariants', () => {
       expect(p.bbox.h).toBe(bbox[1]);
     });
   }
+});
+
+describe('findPieceById()', () => {
+  it('returns the matching piece for a valid id', () => {
+    const piece = findPieceById('single');
+    expect(piece).toBeDefined();
+    expect(piece?.id).toBe('single');
+  });
+
+  it('returns undefined for an unknown id', () => {
+    expect(findPieceById('not-a-piece')).toBeUndefined();
+  });
 });
 
 describe('CATALOG — L-shape cell fixtures', () => {
