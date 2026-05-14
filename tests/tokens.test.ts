@@ -72,6 +72,10 @@ describe('tokens.css — layout tokens', () => {
     expect(tokens).toMatch(/--ghost-opacity\s*:/);
   });
 
+  it('declares the z-overlay token', () => {
+    expect(tokens).toMatch(/--z-overlay\s*:/);
+  });
+
   it('keeps CELL_SIZE_FALLBACK in drag.ts in sync with --cell-size', () => {
     const match = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
     expect(match).not.toBeNull();

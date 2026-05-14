@@ -1,6 +1,7 @@
 import {
   applyPlacement,
   createEmptyBoard,
+  hasAnyLegalPlacement,
   lineBonus,
   resolveClears,
   streakMultiplier,
@@ -10,20 +11,24 @@ import { samplePiece, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
 import { createHud, renderScore } from './hud';
+import { createOverlay, renderOverlay } from './overlay';
 
 export { TRAY_SIZE };
 
 export type GameOptions = {
   readonly rng?: () => number;
+  readonly initialBoard?: BoardState;
 };
 
 export type GameApi = {
   mount(root: HTMLElement): void;
   place(slotIndex: number, anchorRow: number, anchorCol: number): void;
+  newGame(): void;
   readonly boardState: BoardState;
   readonly trayPieces: ReadonlyArray<Piece | null>;
   readonly score: number;
   readonly streak: number;
+  readonly gameOver: boolean;
 };
 
 const PERFECT_CLEAR_BONUS = 300;
@@ -39,16 +44,22 @@ function isBoardEmpty(board: BoardState): boolean {
 
 export function createGame(options: GameOptions = {}): GameApi {
   const rng = options.rng ?? Math.random;
-  let board: BoardState = createEmptyBoard();
+  let board: BoardState = options.initialBoard ?? createEmptyBoard();
   let tray: Array<Piece | null> = [];
   let score = 0;
   let streak = 0;
+  let gameOver = false;
   const boardEl = createBoard();
   const trayEl = createTray();
   const hudEl = createHud();
+  const overlayEl = createOverlay();
 
   function refillTray(): void {
     tray = Array.from({ length: TRAY_SIZE }, () => samplePiece(rng));
+  }
+
+  function updateGameOver(): void {
+    gameOver = !hasAnyLegalPlacement(board, tray);
   }
 
   function render(): void {
@@ -66,18 +77,31 @@ export function createGame(options: GameOptions = {}): GameApi {
         slot.removeAttribute('data-piece-id');
       }
     }
+    renderOverlay(overlayEl, { visible: gameOver, score });
   }
 
   refillTray();
+  updateGameOver();
   render();
+
+  const newGameButton = overlayEl.querySelector<HTMLButtonElement>(
+    '.overlay__button',
+  );
+  if (newGameButton) {
+    newGameButton.addEventListener('click', () => newGame());
+  }
 
   function mount(root: HTMLElement): void {
     root.appendChild(hudEl);
     root.appendChild(boardEl);
     root.appendChild(trayEl);
+    root.appendChild(overlayEl);
   }
 
   function place(slotIndex: number, anchorRow: number, anchorCol: number): void {
+    if (gameOver) {
+      throw new Error('place: game over');
+    }
     if (slotIndex < 0 || slotIndex >= TRAY_SIZE) {
       throw new Error(
         `place: slotIndex ${slotIndex} out of range [0, ${TRAY_SIZE})`,
@@ -102,12 +126,23 @@ export function createGame(options: GameOptions = {}): GameApi {
     if (tray.every((p) => p === null)) {
       refillTray();
     }
+    updateGameOver();
+    render();
+  }
+
+  function newGame(): void {
+    board = createEmptyBoard();
+    score = 0;
+    streak = 0;
+    refillTray();
+    updateGameOver();
     render();
   }
 
   return {
     mount,
     place,
+    newGame,
     get boardState() {
       return board;
     },
@@ -119,6 +154,9 @@ export function createGame(options: GameOptions = {}): GameApi {
     },
     get streak() {
       return streak;
+    },
+    get gameOver() {
+      return gameOver;
     },
   };
 }

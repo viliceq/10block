@@ -36,6 +36,7 @@ export function createDrag(
 
   function onPointerDown(e: PointerEvent): void {
     if (active) return;
+    if (game.gameOver) return;
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const slot = target.closest<HTMLElement>('.tray__slot');

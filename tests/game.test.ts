@@ -1,7 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { createGame, TRAY_SIZE, type GameApi } from '../src/game';
 import { CATALOG, samplePiece } from '../src/pieces';
-import { canPlace } from '../src/engine';
+import {
+  canPlace,
+  type BoardState,
+  type CellState,
+} from '../src/engine';
+
+function fullBoard(family: 'sq2' | 'sq3' | 'line' | 'l3' = 'sq2'): BoardState {
+  return Array.from({ length: 10 }, () =>
+    Array.from({ length: 10 }, () => family) as CellState[],
+  );
+}
+
 
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
@@ -311,6 +322,86 @@ describe('place() — illegal placements preserve state', () => {
     expect(
       root.querySelectorAll('.board__cell[data-state="filled"]').length,
     ).toBe(0);
+  });
+});
+
+describe('Game — game over', () => {
+  it('starts with gameOver=false on an empty board', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    expect(game.gameOver).toBe(false);
+  });
+
+  it('starts with gameOver=true when initialBoard has no legal placement', () => {
+    const game = createGame({ rng: mulberry32(1), initialBoard: fullBoard() });
+    expect(game.gameOver).toBe(true);
+  });
+
+  it('throws on place() when gameOver is true', () => {
+    const game = createGame({ rng: mulberry32(1), initialBoard: fullBoard() });
+    game.mount(document.createElement('div'));
+    expect(() => game.place(0, 0, 0)).toThrow(/game over/i);
+  });
+
+  it('flips gameOver to true after a placement leaves no legal moves', () => {
+    // Construct a near-locked board where every row and column already has
+    // at least one empty cell (so resolveClears triggers nothing). The
+    // empties are:
+    //   - a diagonal: (0,0)..(9,9) — guarantees per-row, per-column gaps
+    //   - a 2x2 hole around (5,5)-(6,6) for the test piece
+    //   - tails at (5,9), (6,9), (9,5), (9,6) so placing the 2x2 doesn't
+    //     fully fill the rows/cols it touches
+    // After placing a square-2 at (5,5), the remaining empties are
+    // isolated singletons (+ one vertical pair (5,9)-(6,9) and one
+    // horizontal pair (9,5)-(9,6)). Only single + domino-h + domino-v can
+    // fit; the seed search bars those from slots 1 and 2.
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const holes: ReadonlyArray<readonly [number, number]> = [
+      // diagonal (rows and cols all keep one empty)
+      [0, 0], [1, 1], [2, 2], [3, 3], [4, 4],
+      [5, 5], [6, 6], [7, 7], [8, 8], [9, 9],
+      // 2x2 hole completes around the diagonal at (5,5)-(6,6)
+      [5, 6], [6, 5],
+      // tails so the 2x2 placement doesn't complete its rows/cols
+      [5, 9], [6, 9], [9, 5], [9, 6],
+    ];
+    for (const [r, c] of holes) {
+      const row = board[r];
+      if (row) row[c] = null;
+    }
+
+    const blocked = new Set(['single', 'domino-h', 'domino-v']);
+    const seed = findSeedWithPieces(
+      ([a, b, c]) =>
+        a === 'square-2' && !blocked.has(b ?? '') && !blocked.has(c ?? ''),
+    );
+    const game = createGame({ rng: mulberry32(seed), initialBoard: board });
+    game.mount(document.createElement('div'));
+
+    expect(game.gameOver).toBe(false);
+    game.place(0, 5, 5);
+    expect(game.gameOver).toBe(true);
+  });
+
+  it('newGame() resets board, score, streak, gameOver, and tray', () => {
+    const game = createGame({ rng: mulberry32(1), initialBoard: fullBoard() });
+    game.mount(document.createElement('div'));
+    expect(game.gameOver).toBe(true);
+
+    game.newGame();
+    expect(game.gameOver).toBe(false);
+    expect(game.score).toBe(0);
+    expect(game.streak).toBe(0);
+    for (const row of game.boardState) {
+      for (const cell of row) {
+        expect(cell).toBeNull();
+      }
+    }
+    expect(game.trayPieces.length).toBe(TRAY_SIZE);
+    for (const piece of game.trayPieces) {
+      expect(piece).not.toBeNull();
+    }
   });
 });
 

@@ -5,7 +5,6 @@
   gap: var(--cell-gap);
   padding: var(--screen-pad);
   color: var(--color-text);
-  font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
 }
 
 .hud__label {

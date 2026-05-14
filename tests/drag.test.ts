@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createDrag, type DragApi } from '../src/drag';
 import { createGame, type GameApi } from '../src/game';
-import { canPlace } from '../src/engine';
+import { canPlace, type CellState } from '../src/engine';
 
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
@@ -250,6 +250,34 @@ describe('createDrag — destroy', () => {
     const h = setup();
     h.drag.destroy();
     pdown(slot(h, 0));
+    expect(document.body.querySelector('.ghost')).toBeNull();
+  });
+});
+
+describe('createDrag — game over gate', () => {
+  it('does not start a drag when game.gameOver is true', () => {
+    document.body.innerHTML = '';
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const fullBoard: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const game = createGame({
+      rng: mulberry32(1),
+      initialBoard: fullBoard,
+    });
+    game.mount(root);
+    const trayEl = root.querySelector<HTMLElement>('.tray');
+    const boardEl = root.querySelector<HTMLElement>('.board');
+    if (!trayEl || !boardEl) throw new Error('mount failed');
+    createDrag(game, trayEl, boardEl);
+
+    expect(game.gameOver).toBe(true);
+    const slot0 = trayEl.querySelector<HTMLElement>(
+      '.tray__slot[data-slot-index="0"]',
+    );
+    if (!slot0) throw new Error('slot 0 missing');
+    pdown(slot0);
     expect(document.body.querySelector('.ghost')).toBeNull();
   });
 });

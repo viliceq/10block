@@ -55,4 +55,11 @@ describe('main.ts entry point', () => {
     const app = document.getElementById('app');
     expect(app?.querySelector('.hud__score')?.textContent).toBe('0');
   });
+
+  it('mounts the overlay, hidden by default', () => {
+    const app = document.getElementById('app');
+    const overlay = app?.querySelector<HTMLElement>('.overlay');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.dataset['visible']).toBe('false');
+  });
 });

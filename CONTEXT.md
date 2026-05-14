@@ -30,3 +30,7 @@ The vocabulary used in `SPEC.md`, code, tests, commit messages, and ADRs. Keep t
 | **Move score** | The total score added for a single placement: `placementPoints + round(lineBonus(L) × streakMultiplier(streak)) + perfectClearBonus`. Defined by SPEC §5.5. |
 | **Perfect-clear bonus** | A flat **300** awarded when the board is entirely empty after `resolveClears`. The streak multiplier does **not** apply (SPEC §5.4). |
 | **Score** | Running sum of all move scores in the current game. Exposed by `game.score`. |
+| **gameOver** | A read-only boolean on `GameApi`. True iff none of the non-null tray pieces can be legally placed anywhere on the current board (SPEC §6). Recomputed after every `place` (including refill) and at construction. |
+| **newGame** | A `GameApi` method that resets `boardState` to empty, `score`/`streak`/`gameOver` to their initial values, refills the tray, and re-renders. The "New game" button on the overlay calls it. |
+| **initialBoard** | An optional `GameOptions` parameter. When provided, the controller starts with this `BoardState` instead of an empty grid. Used by tests to set up near-locked scenarios; also the eventual hook for SPEC §10 "resume game" persistence. |
+| **Overlay** | The full-viewport `.overlay` surface that appears when `gameOver` is true. Shows "GAME OVER", the final score, and a "New game" button. |

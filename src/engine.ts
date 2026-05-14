@@ -75,6 +75,23 @@ export function streakMultiplier(streak: number): number {
   return Math.min(1 + 0.25 * (streak - 1), 3.0);
 }
 
+/** Game-over predicate (SPEC §6). Returns true iff at least one non-null piece
+ *  in `pieces` fits at some anchor on `board`. Short-circuits on the first hit. */
+export function hasAnyLegalPlacement(
+  board: BoardState,
+  pieces: ReadonlyArray<Piece | null>,
+): boolean {
+  for (const piece of pieces) {
+    if (!piece) continue;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (canPlace(board, piece, r, c)) return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function resolveClears(board: BoardState): ClearResult {
   const rowsCleared: number[] = [];
   const colsCleared: number[] = [];

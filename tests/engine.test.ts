@@ -6,6 +6,7 @@ import {
   resolveClears,
   lineBonus,
   streakMultiplier,
+  hasAnyLegalPlacement,
   type BoardState,
   type CellState,
 } from '../src/engine';
@@ -418,5 +419,58 @@ describe('streakMultiplier()', () => {
     [-5, 1.0],
   ])('streak=%i → %f', (streak, expected) => {
     expect(streakMultiplier(streak)).toBe(expected);
+  });
+});
+
+describe('hasAnyLegalPlacement()', () => {
+  it('is true when any non-null piece fits on an empty board', () => {
+    const board = createEmptyBoard();
+    expect(hasAnyLegalPlacement(board, [pieceById('square-3')])).toBe(true);
+  });
+
+  it('is false when the tray contains only nulls', () => {
+    const board = createEmptyBoard();
+    expect(hasAnyLegalPlacement(board, [null, null, null])).toBe(false);
+  });
+
+  it('is false on a fully filled board for any piece', () => {
+    const board = fillEvery(createEmptyBoard(), 'sq2');
+    for (const piece of CATALOG) {
+      expect(hasAnyLegalPlacement(board, [piece]), piece.id).toBe(false);
+    }
+  });
+
+  it('returns true if at least one of the tray pieces fits', () => {
+    // Hand-craft a board with only (0, 0) empty — only the single piece fits.
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const row0 = board[0];
+    if (row0) row0[0] = null;
+
+    expect(
+      hasAnyLegalPlacement(board, [
+        pieceById('square-3'),
+        pieceById('single'),
+        null,
+      ]),
+    ).toBe(true);
+  });
+
+  it('returns false when no piece in the tray can fit', () => {
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const row0 = board[0];
+    if (row0) row0[0] = null;
+
+    // Only (0,0) is empty; only `single` fits there. Tray has no single.
+    expect(
+      hasAnyLegalPlacement(board, [
+        pieceById('square-3'),
+        pieceById('penta-h'),
+        null,
+      ]),
+    ).toBe(false);
   });
 });
