@@ -69,4 +69,10 @@ describe('main.ts entry point', () => {
     expect(bestPair).not.toBeNull();
     expect(bestPair?.querySelector('.hud__score')?.textContent).toBe('0');
   });
+
+  it('mounts a mute button in the HUD', () => {
+    const app = document.getElementById('app');
+    const button = app?.querySelector<HTMLButtonElement>('.hud__mute');
+    expect(button).not.toBeNull();
+  });
 });

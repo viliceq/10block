@@ -2,6 +2,7 @@ import type { GameApi } from './game';
 import type { Piece } from './pieces';
 import { canPlace, BOARD_SIZE } from './engine';
 import { renderBoardState } from './board';
+import { createSilentAudio, type AudioApi } from './audio';
 
 export type DragApi = {
   destroy(): void;
@@ -31,6 +32,7 @@ export function createDrag(
   game: GameApi,
   trayEl: HTMLElement,
   boardEl: HTMLElement,
+  audio: AudioApi = createSilentAudio(),
 ): DragApi {
   let active: ActiveDrag | null = null;
 
@@ -59,6 +61,7 @@ export function createDrag(
     }
 
     active = { pointerId: e.pointerId, slotIndex, slot, ghost, pointerOffset };
+    audio.pickup();
   }
 
   function onPointerMove(e: PointerEvent): void {
@@ -111,7 +114,10 @@ export function createDrag(
         }
       }
     }
-    if (!placed) clearPreview();
+    if (!placed) {
+      clearPreview();
+      audio.reject();
+    }
 
     ghost.remove();
     slot.removeAttribute('data-picked');

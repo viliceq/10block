@@ -10,6 +10,7 @@ export type LastGame = {
 
 const BEST_SCORE_KEY = 'blockly:bestScore';
 const LAST_GAME_KEY = 'blockly:lastGame';
+const MUTE_KEY = 'blockly:mute';
 
 const VALID_FAMILIES: ReadonlyArray<PieceFamily> = [
   'single',
@@ -62,6 +63,22 @@ export function saveLastGame(state: LastGame): void {
 export function clearLastGame(): void {
   try {
     localStorage.removeItem(LAST_GAME_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function loadMute(): boolean {
+  try {
+    return localStorage.getItem(MUTE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function saveMute(value: boolean): void {
+  try {
+    localStorage.setItem(MUTE_KEY, value ? 'true' : 'false');
   } catch {
     // ignore
   }

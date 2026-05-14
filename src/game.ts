@@ -10,8 +10,9 @@ import {
 import { findPieceById, samplePiece, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
-import { createHud, renderBestScore, renderScore } from './hud';
+import { createHud, renderBestScore, renderMute, renderScore } from './hud';
 import { createOverlay, renderOverlay } from './overlay';
+import { createSilentAudio, type AudioApi } from './audio';
 import {
   clearLastGame,
   loadBestScore,
@@ -25,6 +26,7 @@ export { TRAY_SIZE };
 export type GameOptions = {
   readonly rng?: () => number;
   readonly initialBoard?: BoardState;
+  readonly audio?: AudioApi;
 };
 
 export type GameApi = {
@@ -52,6 +54,7 @@ function isBoardEmpty(board: BoardState): boolean {
 
 export function createGame(options: GameOptions = {}): GameApi {
   const rng = options.rng ?? Math.random;
+  const audio = options.audio ?? createSilentAudio();
   let board: BoardState = options.initialBoard ?? createEmptyBoard();
   let tray: Array<Piece | null> = [];
   let score = 0;
@@ -83,6 +86,7 @@ export function createGame(options: GameOptions = {}): GameApi {
   function render(): void {
     renderScore(hudEl, score);
     renderBestScore(hudEl, bestScore);
+    renderMute(hudEl, audio.isMuted());
     renderBoardState(boardEl, board);
     const slots = trayEl.querySelectorAll<HTMLElement>('.tray__slot');
     for (let i = 0; i < slots.length; i++) {
@@ -124,6 +128,14 @@ export function createGame(options: GameOptions = {}): GameApi {
   );
   if (newGameButton) {
     newGameButton.addEventListener('click', () => newGame());
+  }
+
+  const muteButton = hudEl.querySelector<HTMLButtonElement>('.hud__mute');
+  if (muteButton) {
+    muteButton.addEventListener('click', () => {
+      audio.setMuted(!audio.isMuted());
+      render();
+    });
   }
 
   function mount(root: HTMLElement): void {
@@ -171,6 +183,19 @@ export function createGame(options: GameOptions = {}): GameApi {
       clearLastGame();
     } else {
       persistSnapshot();
+    }
+
+    // SFX priority: gameOver > perfect > combo > clear > place. Exactly one fires.
+    if (gameOver) {
+      audio.gameOver();
+    } else if (perfect > 0) {
+      audio.perfect();
+    } else if (L >= 2 || newStreak >= 2) {
+      audio.combo();
+    } else if (L === 1) {
+      audio.clear();
+    } else {
+      audio.place();
     }
 
     render();

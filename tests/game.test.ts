@@ -448,6 +448,150 @@ describe('Game — persistence', () => {
   });
 });
 
+describe('Game — audio events', () => {
+  type AudioEvent =
+    | 'pickup'
+    | 'place'
+    | 'reject'
+    | 'clear'
+    | 'combo'
+    | 'perfect'
+    | 'gameOver';
+
+  function recordingAudio(): {
+    calls: AudioEvent[];
+    api: {
+      pickup: () => void;
+      place: () => void;
+      reject: () => void;
+      clear: () => void;
+      combo: () => void;
+      perfect: () => void;
+      gameOver: () => void;
+      setMuted: (v: boolean) => void;
+      isMuted: () => boolean;
+      unlock: () => void;
+    };
+  } {
+    const calls: AudioEvent[] = [];
+    return {
+      calls,
+      api: {
+        pickup: () => calls.push('pickup'),
+        place: () => calls.push('place'),
+        reject: () => calls.push('reject'),
+        clear: () => calls.push('clear'),
+        combo: () => calls.push('combo'),
+        perfect: () => calls.push('perfect'),
+        gameOver: () => calls.push('gameOver'),
+        setMuted: () => {},
+        isMuted: () => false,
+        unlock: () => {},
+      },
+    };
+  }
+
+  function makeBoard(
+    fills: ReadonlyArray<readonly [number, number, CellState]>,
+  ): BoardState {
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => null) as CellState[],
+    );
+    for (const [r, c, v] of fills) {
+      const row = board[r];
+      if (row) row[c] = v;
+    }
+    return board;
+  }
+
+  it('plays "place" on a non-clearing placement', () => {
+    const rec = recordingAudio();
+    const game = createGame({ rng: mulberry32(1), audio: rec.api });
+    game.mount(document.createElement('div'));
+    game.place(0, 0, 0);
+    expect(rec.calls).toEqual(['place']);
+  });
+
+  it('plays "clear" on a single-line clear without perfect-clear', () => {
+    const seed = findSeedWithPieces(([a]) => a === 'single');
+    const fills: Array<[number, number, CellState]> = [];
+    for (let c = 0; c < 9; c++) fills.push([0, c, 'sq2']);
+    fills.push([5, 5, 'sq2']); // prevent perfect clear
+    const rec = recordingAudio();
+    const game = createGame({
+      rng: mulberry32(seed),
+      audio: rec.api,
+      initialBoard: makeBoard(fills),
+    });
+    game.mount(document.createElement('div'));
+    game.place(0, 0, 9);
+    expect(rec.calls).toEqual(['clear']);
+  });
+
+  it('plays "combo" on a simultaneous row+column clear', () => {
+    const seed = findSeedWithPieces(([a]) => a === 'single');
+    const fills: Array<[number, number, CellState]> = [];
+    for (let c = 0; c < 9; c++) fills.push([9, c, 'sq2']);
+    for (let r = 0; r < 9; r++) fills.push([r, 9, 'sq2']);
+    fills.push([5, 5, 'sq2']); // prevent perfect clear
+    const rec = recordingAudio();
+    const game = createGame({
+      rng: mulberry32(seed),
+      audio: rec.api,
+      initialBoard: makeBoard(fills),
+    });
+    game.mount(document.createElement('div'));
+    game.place(0, 9, 9);
+    expect(rec.calls).toEqual(['combo']);
+  });
+
+  it('plays "perfect" when the placement empties the board', () => {
+    const seed = findSeedWithPieces(([a]) => a === 'single');
+    const fills: Array<[number, number, CellState]> = [];
+    for (let c = 0; c < 9; c++) fills.push([0, c, 'sq2']);
+    const rec = recordingAudio();
+    const game = createGame({
+      rng: mulberry32(seed),
+      audio: rec.api,
+      initialBoard: makeBoard(fills),
+    });
+    game.mount(document.createElement('div'));
+    game.place(0, 0, 9);
+    expect(rec.calls).toEqual(['perfect']);
+  });
+
+  it('plays "gameOver" when the placement locks the board', () => {
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const holes: ReadonlyArray<readonly [number, number]> = [
+      [0, 0], [1, 1], [2, 2], [3, 3], [4, 4],
+      [5, 5], [6, 6], [7, 7], [8, 8], [9, 9],
+      [5, 6], [6, 5],
+      [5, 9], [6, 9], [9, 5], [9, 6],
+    ];
+    for (const [r, c] of holes) {
+      const row = board[r];
+      if (row) row[c] = null;
+    }
+    const blocked = new Set(['single', 'domino-h', 'domino-v']);
+    const seed = findSeedWithPieces(
+      ([a, b, c]) =>
+        a === 'square-2' && !blocked.has(b ?? '') && !blocked.has(c ?? ''),
+    );
+
+    const rec = recordingAudio();
+    const game = createGame({
+      rng: mulberry32(seed),
+      audio: rec.api,
+      initialBoard: board,
+    });
+    game.mount(document.createElement('div'));
+    game.place(0, 5, 5);
+    expect(rec.calls).toEqual(['gameOver']);
+  });
+});
+
 describe('Game — game over', () => {
   it('starts with gameOver=false on an empty board', () => {
     const game = createGame({ rng: mulberry32(1) });

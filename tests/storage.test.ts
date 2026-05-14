@@ -5,6 +5,8 @@ import {
   loadLastGame,
   saveLastGame,
   clearLastGame,
+  loadMute,
+  saveMute,
   type LastGame,
 } from '../src/storage';
 import { createEmptyBoard } from '../src/engine';
@@ -111,5 +113,27 @@ describe('last-game persistence', () => {
       throw new Error('quota');
     });
     expect(() => saveLastGame(sampleLastGame())).not.toThrow();
+  });
+});
+
+describe('mute persistence', () => {
+  it('loadMute returns false when nothing is stored', () => {
+    expect(loadMute()).toBe(false);
+  });
+
+  it('saveMute(true) + loadMute returns true', () => {
+    saveMute(true);
+    expect(loadMute()).toBe(true);
+  });
+
+  it('saveMute(false) + loadMute returns false', () => {
+    saveMute(true);
+    saveMute(false);
+    expect(loadMute()).toBe(false);
+  });
+
+  it('loadMute returns false for any non-"true" string', () => {
+    localStorage.setItem('blockly:mute', 'yes');
+    expect(loadMute()).toBe(false);
   });
 });

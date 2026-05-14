@@ -254,6 +254,97 @@ describe('createDrag — destroy', () => {
   });
 });
 
+describe('createDrag — audio', () => {
+  type AudioCalls = string[];
+
+  function setupWithAudio(): { h: Harness; calls: AudioCalls } {
+    document.body.innerHTML = '';
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const calls: string[] = [];
+    const audio = {
+      pickup: () => calls.push('pickup'),
+      place: () => calls.push('place'),
+      reject: () => calls.push('reject'),
+      clear: () => calls.push('clear'),
+      combo: () => calls.push('combo'),
+      perfect: () => calls.push('perfect'),
+      gameOver: () => calls.push('gameOver'),
+      setMuted: () => {},
+      isMuted: () => false,
+      unlock: () => {},
+    };
+    const game = createGame({ rng: mulberry32(1), audio });
+    game.mount(root);
+    const trayEl = root.querySelector<HTMLElement>('.tray');
+    const boardEl = root.querySelector<HTMLElement>('.board');
+    if (!trayEl || !boardEl) throw new Error('mount failed');
+    const drag = createDrag(game, trayEl, boardEl, audio);
+    return { h: { game, trayEl, boardEl, drag }, calls };
+  }
+
+  it('calls audio.pickup on a successful pickup', () => {
+    const { h, calls } = setupWithAudio();
+    pdown(slot(h, 0));
+    expect(calls).toContain('pickup');
+  });
+
+  it('calls audio.reject on an illegal release', () => {
+    const { h, calls } = setupWithAudio();
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    pdown(slot(h, 0));
+    pup();
+    expect(calls).toContain('reject');
+  });
+
+  it('does not call audio.reject on a legal release', () => {
+    const { h, calls } = setupWithAudio();
+    const target = boardCell(h, 0, 0);
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([target]);
+    pdown(slot(h, 0));
+    pup();
+    expect(calls).not.toContain('reject');
+  });
+
+  it('does not call audio.pickup when game.gameOver is true', () => {
+    document.body.innerHTML = '';
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const calls: string[] = [];
+    const audio = {
+      pickup: () => calls.push('pickup'),
+      place: () => calls.push('place'),
+      reject: () => calls.push('reject'),
+      clear: () => calls.push('clear'),
+      combo: () => calls.push('combo'),
+      perfect: () => calls.push('perfect'),
+      gameOver: () => calls.push('gameOver'),
+      setMuted: () => {},
+      isMuted: () => false,
+      unlock: () => {},
+    };
+    const fullBoard: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => 'sq2') as CellState[],
+    );
+    const game = createGame({
+      rng: mulberry32(1),
+      audio,
+      initialBoard: fullBoard,
+    });
+    game.mount(root);
+    const trayEl = root.querySelector<HTMLElement>('.tray');
+    const boardEl = root.querySelector<HTMLElement>('.board');
+    if (!trayEl || !boardEl) throw new Error('mount failed');
+    createDrag(game, trayEl, boardEl, audio);
+    const slot0 = trayEl.querySelector<HTMLElement>(
+      '.tray__slot[data-slot-index="0"]',
+    );
+    if (!slot0) throw new Error('slot 0 missing');
+    pdown(slot0);
+    expect(calls).not.toContain('pickup');
+  });
+});
+
 describe('createDrag — game over gate', () => {
   it('does not start a drag when game.gameOver is true', () => {
     document.body.innerHTML = '';

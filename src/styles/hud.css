@@ -1,9 +1,29 @@
 .hud {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
   gap: var(--screen-pad);
   padding: var(--screen-pad);
   color: var(--color-text);
+}
+
+.hud__mute {
+  justify-self: end;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: var(--cell-gap) var(--screen-pad);
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-cell-empty);
+  border-radius: var(--radius);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.hud__mute:hover {
+  opacity: 1;
 }
 
 .hud__pair {
