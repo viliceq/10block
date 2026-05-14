@@ -230,6 +230,71 @@ describe('place() — clears', () => {
   });
 });
 
+describe('Game — scoring', () => {
+  it('starts at score=0, streak=0', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    expect(game.score).toBe(0);
+    expect(game.streak).toBe(0);
+  });
+
+  it('credits placement points without any clear', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    game.mount(document.createElement('div'));
+    const piece = game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    game.place(0, 0, 0);
+    expect(game.score).toBe(piece.cells.length);
+    expect(game.streak).toBe(0);
+  });
+
+  it('SPEC §5.6 example: two penta-h that clear a row yield total 320', () => {
+    const seed = findSeedWithPieces(
+      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+    );
+    const game = createGame({ rng: mulberry32(seed) });
+    game.mount(document.createElement('div'));
+
+    game.place(0, 0, 0); // 5 cells, no clear → +5
+    expect(game.score).toBe(5);
+    expect(game.streak).toBe(0);
+
+    game.place(1, 0, 5); // 5 cells, L=1, streak→1, ×1.0, perfect-clear bonus
+    // 5 (prev) + 5 (placement) + round(10 × 1.0) (bonus) + 300 (perfect) = 320.
+    expect(game.score).toBe(320);
+    expect(game.streak).toBe(1);
+  });
+
+  it('resets streak to 0 after a non-clearing placement', () => {
+    const seed = findSeedWithPieces(
+      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+    );
+    const game = createGame({ rng: mulberry32(seed) });
+    game.mount(document.createElement('div'));
+
+    game.place(0, 0, 0);
+    game.place(1, 0, 5); // perfect clear, streak=1
+    expect(game.streak).toBe(1);
+
+    const piece2 = game.trayPieces[2];
+    if (!piece2) throw new Error('no piece in slot 2');
+    const [r, c] = findSafeAnchor(game, 2);
+    const scoreBefore = game.score;
+
+    game.place(2, r, c); // any piece on an empty board — single piece can't fill a 10-cell row/col
+
+    expect(game.streak).toBe(0);
+    expect(game.score).toBe(scoreBefore + piece2.cells.length);
+  });
+
+  it('does not change score or streak on illegal placement', () => {
+    const game = createGame({ rng: mulberry32(1) });
+    game.mount(document.createElement('div'));
+    expect(() => game.place(0, 10, 10)).toThrow();
+    expect(game.score).toBe(0);
+    expect(game.streak).toBe(0);
+  });
+});
+
 describe('place() — illegal placements preserve state', () => {
   it('does not mutate board, tray, or DOM when placement throws', () => {
     const game = createGame({ rng: mulberry32(1) });

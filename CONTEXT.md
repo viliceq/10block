@@ -25,3 +25,8 @@ The vocabulary used in `SPEC.md`, code, tests, commit messages, and ADRs. Keep t
 | **Anchor** | The `(row, col)` where a piece's bounding-box origin `(0, 0)` lands on the board. Piece cell `(r, c)` therefore lands at `(anchorRow + r, anchorCol + c)`. |
 | **canPlace** | Pure predicate: returns whether a piece fits at a given anchor on a given board (all landing cells in-bounds and empty). |
 | **ClearResult** | The return shape of `resolveClears(board)`: `{ board: BoardState, rowsCleared: ReadonlyArray<number>, colsCleared: ReadonlyArray<number> }`. `rowsCleared.length + colsCleared.length` is **L** in the scoring formula. |
+| **Placement points** | The `piece.cells.length` portion of a move's score (SPEC §5.1). One point per cell placed. |
+| **Line bonus** | The score awarded by `lineBonus(L)` per SPEC §5.2. Multiplied by the streak multiplier before being added to the move score. |
+| **Move score** | The total score added for a single placement: `placementPoints + round(lineBonus(L) × streakMultiplier(streak)) + perfectClearBonus`. Defined by SPEC §5.5. |
+| **Perfect-clear bonus** | A flat **300** awarded when the board is entirely empty after `resolveClears`. The streak multiplier does **not** apply (SPEC §5.4). |
+| **Score** | Running sum of all move scores in the current game. Exposed by `game.score`. |

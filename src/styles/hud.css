@@ -1,0 +1,23 @@
+.hud {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: var(--cell-gap);
+  padding: var(--screen-pad);
+  color: var(--color-text);
+  font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
+}
+
+.hud__label {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.hud__score {
+  font-size: 40px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}

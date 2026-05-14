@@ -56,6 +56,25 @@ export type ClearResult = {
   readonly colsCleared: ReadonlyArray<number>;
 };
 
+/** Per-move line-clear bonus from SPEC §5.2. `L` is `rowsCleared + colsCleared`
+ *  in a single placement; negative values are floored to 0 defensively. */
+export function lineBonus(L: number): number {
+  if (L <= 0) return 0;
+  if (L === 1) return 10;
+  if (L === 2) return 30;
+  if (L === 3) return 60;
+  if (L === 4) return 120;
+  if (L === 5) return 200;
+  if (L === 6) return 300;
+  return 300 + 50 * (L - 6);
+}
+
+/** Streak multiplier from SPEC §5.3. Applied to the line bonus only. */
+export function streakMultiplier(streak: number): number {
+  if (streak <= 1) return 1.0;
+  return Math.min(1 + 0.25 * (streak - 1), 3.0);
+}
+
 export function resolveClears(board: BoardState): ClearResult {
   const rowsCleared: number[] = [];
   const colsCleared: number[] = [];

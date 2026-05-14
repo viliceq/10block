@@ -4,6 +4,8 @@ import {
   canPlace,
   applyPlacement,
   resolveClears,
+  lineBonus,
+  streakMultiplier,
   type BoardState,
   type CellState,
 } from '../src/engine';
@@ -384,5 +386,37 @@ describe('resolveClears()', () => {
     const snapshot = JSON.parse(JSON.stringify(before));
     resolveClears(before);
     expect(JSON.parse(JSON.stringify(before))).toEqual(snapshot);
+  });
+});
+
+describe('lineBonus()', () => {
+  it.each([
+    [0, 0],
+    [1, 10],
+    [2, 30],
+    [3, 60],
+    [4, 120],
+    [5, 200],
+    [6, 300],
+    [7, 350],
+    [10, 500],
+    [-1, 0],
+  ])('L=%i → %i', (L, expected) => {
+    expect(lineBonus(L)).toBe(expected);
+  });
+});
+
+describe('streakMultiplier()', () => {
+  it.each([
+    [0, 1.0],
+    [1, 1.0],
+    [2, 1.25],
+    [3, 1.5],
+    [5, 2.0],
+    [9, 3.0],
+    [20, 3.0],
+    [-5, 1.0],
+  ])('streak=%i → %f', (streak, expected) => {
+    expect(streakMultiplier(streak)).toBe(expected);
   });
 });

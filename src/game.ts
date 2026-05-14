@@ -1,12 +1,15 @@
 import {
   applyPlacement,
   createEmptyBoard,
+  lineBonus,
   resolveClears,
+  streakMultiplier,
   type BoardState,
 } from './engine';
 import { samplePiece, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
+import { createHud, renderScore } from './hud';
 
 export { TRAY_SIZE };
 
@@ -19,20 +22,37 @@ export type GameApi = {
   place(slotIndex: number, anchorRow: number, anchorCol: number): void;
   readonly boardState: BoardState;
   readonly trayPieces: ReadonlyArray<Piece | null>;
+  readonly score: number;
+  readonly streak: number;
 };
+
+const PERFECT_CLEAR_BONUS = 300;
+
+function isBoardEmpty(board: BoardState): boolean {
+  for (const row of board) {
+    for (const cell of row) {
+      if (cell !== null) return false;
+    }
+  }
+  return true;
+}
 
 export function createGame(options: GameOptions = {}): GameApi {
   const rng = options.rng ?? Math.random;
   let board: BoardState = createEmptyBoard();
   let tray: Array<Piece | null> = [];
+  let score = 0;
+  let streak = 0;
   const boardEl = createBoard();
   const trayEl = createTray();
+  const hudEl = createHud();
 
   function refillTray(): void {
     tray = Array.from({ length: TRAY_SIZE }, () => samplePiece(rng));
   }
 
   function render(): void {
+    renderScore(hudEl, score);
     renderBoardState(boardEl, board);
     const slots = trayEl.querySelectorAll<HTMLElement>('.tray__slot');
     for (let i = 0; i < slots.length; i++) {
@@ -52,6 +72,7 @@ export function createGame(options: GameOptions = {}): GameApi {
   render();
 
   function mount(root: HTMLElement): void {
+    root.appendChild(hudEl);
     root.appendChild(boardEl);
     root.appendChild(trayEl);
   }
@@ -67,7 +88,16 @@ export function createGame(options: GameOptions = {}): GameApi {
       throw new Error(`place: slot ${slotIndex} is already empty`);
     }
     const placed = applyPlacement(board, piece, anchorRow, anchorCol);
-    board = resolveClears(placed).board;
+    const cleared = resolveClears(placed);
+    board = cleared.board;
+
+    const L = cleared.rowsCleared.length + cleared.colsCleared.length;
+    const newStreak = L > 0 ? streak + 1 : 0;
+    const bonus = Math.round(lineBonus(L) * streakMultiplier(newStreak));
+    const perfect = isBoardEmpty(board) ? PERFECT_CLEAR_BONUS : 0;
+    score += piece.cells.length + bonus + perfect;
+    streak = newStreak;
+
     tray[slotIndex] = null;
     if (tray.every((p) => p === null)) {
       refillTray();
@@ -83,6 +113,12 @@ export function createGame(options: GameOptions = {}): GameApi {
     },
     get trayPieces() {
       return tray.slice();
+    },
+    get score() {
+      return score;
+    },
+    get streak() {
+      return streak;
     },
   };
 }

@@ -41,4 +41,18 @@ describe('main.ts entry point', () => {
     expect(boardIndex).toBeGreaterThanOrEqual(0);
     expect(trayIndex).toBeGreaterThan(boardIndex);
   });
+
+  it('mounts the HUD as the first child of #app, before the board', () => {
+    const app = document.getElementById('app');
+    const children = Array.from(app?.children ?? []);
+    const hudIndex = children.findIndex((c) => c.classList.contains('hud'));
+    const boardIndex = children.findIndex((c) => c.classList.contains('board'));
+    expect(hudIndex).toBeGreaterThanOrEqual(0);
+    expect(boardIndex).toBeGreaterThan(hudIndex);
+  });
+
+  it('initialises the HUD score to "0"', () => {
+    const app = document.getElementById('app');
+    expect(app?.querySelector('.hud__score')?.textContent).toBe('0');
+  });
 });
