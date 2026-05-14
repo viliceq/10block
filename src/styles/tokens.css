@@ -40,3 +40,20 @@
   --z-overlay: 900;
   --color-overlay-backdrop: rgba(15, 23, 42, 0.85);
 }
+
+/* SPEC §8.3 — iPhone-portrait override.
+ * 430px covers every current iPhone in portrait (Pro Max is the widest).
+ * Landscape iPhones have width ≥ 667px, so the portrait constraint is implicit.
+ * Sizing math: board = 10×32 + 9×2 + 2×6 = 350; app padding 12px × 2 = 24;
+ * total layout = 374px. Fits iPhone SE 2nd-gen (375px) and every newer
+ * iPhone in portrait. */
+@media (max-width: 430px) {
+  :root {
+    --cell-size: 32px;
+    --cell-gap: 2px;
+    --board-pad: 6px;
+    --screen-pad: 12px;
+    --tray-cell-size: 16px;
+    --tray-slot-size: 84px;
+  }
+}

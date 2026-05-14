@@ -188,7 +188,20 @@ The game ends when **none of the three pieces currently in the tray can be legal
 
 ### 8.3 Design tokens
 
-Declared in `src/styles/tokens.css`. iPhone-portrait media query overrides `--cell-size` to 36px.
+Declared in `src/styles/tokens.css`. On narrow viewports (iPhone portrait, `@media (max-width: 430px)`) a media block overrides the sizing tokens so the whole game fits on small phones:
+
+| Token | iPad default | iPhone override |
+|---|---|---|
+| `--cell-size` | 64px | 32px |
+| `--cell-gap` | 4px | 2px |
+| `--board-pad` | 12px | 6px |
+| `--screen-pad` | 24px | 12px |
+| `--tray-cell-size` | 28px | 16px |
+| `--tray-slot-size` | 168px | 84px |
+
+Sizing math: board = `10 × 32 + 9 × 2 + 2 × 6 = 350px`; layout = `350 + 24 = 374px`. Fits iPhone SE (375px) and every newer iPhone in portrait.
+
+Colours, motion tokens, and z-index tokens are not overridden.
 
 ```
 /* layout */

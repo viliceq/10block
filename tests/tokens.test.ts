@@ -76,6 +76,46 @@ describe('tokens.css — layout tokens', () => {
     expect(tokens).toMatch(/--z-overlay\s*:/);
   });
 
+  describe('iPhone-portrait media query (SPEC §8.3)', () => {
+    function mediaBlock(css: string): string {
+      const match = css.match(/@media\s*\(\s*max-width:\s*430px\s*\)\s*\{([\s\S]*?)\}\s*$/m);
+      return match?.[1] ?? '';
+    }
+
+    it('exists and targets max-width: 430px', () => {
+      expect(tokens).toMatch(/@media\s*\(\s*max-width:\s*430px\s*\)/);
+    });
+
+    it('overrides --cell-size to 32px', () => {
+      expect(mediaBlock(tokens)).toMatch(/--cell-size\s*:\s*32px/i);
+    });
+
+    it('overrides the gap and pad tokens for the smaller layout', () => {
+      const block = mediaBlock(tokens);
+      expect(block).toMatch(/--cell-gap\s*:\s*2px/i);
+      expect(block).toMatch(/--board-pad\s*:\s*6px/i);
+      expect(block).toMatch(/--screen-pad\s*:\s*12px/i);
+    });
+
+    it('overrides the tray-cell-size and tray-slot-size tokens', () => {
+      const block = mediaBlock(tokens);
+      expect(block).toMatch(/--tray-cell-size\s*:\s*16px/i);
+      expect(block).toMatch(/--tray-slot-size\s*:\s*84px/i);
+    });
+
+    it('keeps the iPhone board width within iPhone SE viewport (375px)', () => {
+      const block = mediaBlock(tokens);
+      const cellSize = Number(block.match(/--cell-size\s*:\s*(\d+)px/i)?.[1]);
+      const cellGap = Number(block.match(/--cell-gap\s*:\s*(\d+)px/i)?.[1]);
+      const boardPad = Number(block.match(/--board-pad\s*:\s*(\d+)px/i)?.[1]);
+      const screenPad = Number(block.match(/--screen-pad\s*:\s*(\d+)px/i)?.[1]);
+
+      const boardWidth = 10 * cellSize + 9 * cellGap + 2 * boardPad;
+      const layoutWidth = boardWidth + 2 * screenPad;
+      expect(layoutWidth).toBeLessThanOrEqual(375);
+    });
+  });
+
   it('keeps CELL_SIZE_FALLBACK in drag.ts in sync with --cell-size', () => {
     const match = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
     expect(match).not.toBeNull();
