@@ -11,7 +11,9 @@ A block-puzzle PWA for iPad Safari. See **`SPEC.md`** for the product spec and *
 | `npm run test:run` | Single Vitest run (used by the post-edit hook) |
 | `npm run test:e2e` | Playwright e2e tests |
 | `npm run typecheck` | TypeScript check, no emit |
-| `npm run build` | Production build |
+| `npm run build` | Production build (emits manifest + service worker via vite-plugin-pwa) |
+| `npm run generate:icons` | Regenerate PNG home-screen icons from `public/icons/icon.svg` |
+| `npm run refresh-npm-min-age` | Roll the `.npmrc` `before=` cutoff forward (run monthly, see below) |
 
 ## Workflow — iteration loop
 
@@ -37,6 +39,14 @@ Each piece of work is one **iteration**, a small TDD slice. Loop:
 - **Animate only `opacity`, `transform`, and CSS custom properties.** Never layout properties.
 - **No comments that re-state code.** Comments only for non-obvious *why*.
 - **Test against state, not pixels.** Use `data-state` attributes and exported state functions; never inspect computed CSS pixel widths.
+
+## Dependencies and supply-chain hygiene
+
+Project-level `.npmrc` carries a rolling `before=<YYYY-MM-DD>` cutoff. npm will refuse to install package versions published more recently than that date. The goal is to give the community ~30 days to detect a malicious version before we pick it up.
+
+**Before any `npm install` session**, run `npm run refresh-npm-min-age` to roll the cutoff to *today minus 30 days*. Without that, you might be installing against a date many months stale (unnecessarily old transitive deps) or, worse, forgetting the cutoff entirely.
+
+The shipped `.npmrc` is committed; the refresh script overwrites the `before=` line in place.
 
 ## Decisions
 
