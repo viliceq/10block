@@ -73,6 +73,32 @@ Vanilla TypeScript + Vite + Vitest + Playwright. No UI framework, no CSS framewo
 
 Why this approach: the codebase has stayed under ~2 000 lines of source through 20 small TDD iterations, every visual rule is a token, and every behaviour change is reviewed by a fresh-context verifier before commit. The full workflow + conventions live in [`CLAUDE.md`](./CLAUDE.md); the design vocabulary in [`CONTEXT.md`](./CONTEXT.md); per-slice decision logs in [`docs/iterations/`](./docs/iterations/).
 
+## Deployment
+
+10Block deploys on **Cloudflare Pages** at *<URL pending>*.
+
+To set up your own deploy:
+
+1. Push the repo to GitHub.
+2. In the Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**, pick the repo.
+3. Build settings:
+   - **Framework preset:** None (or Vite — both work)
+   - **Build command:** `npm install && npm run build`
+   - **Build output directory:** `dist`
+   - **Root directory:** *(leave empty)*
+   - **Environment variables:** `NODE_VERSION = 22`
+4. Save & Deploy. Each subsequent push to `main` redeploys automatically.
+
+Cloudflare serves the static files (HTML, JS, CSS, MP3s, icons) on a global CDN with HTTPS by default — everything a PWA's service worker needs. The default URL is `https://<project>.pages.dev`; a custom domain can be added later in the project's Cloudflare settings.
+
+### CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs type-check + unit tests + production build on every push and PR. Cloudflare's own build is the source of truth for the production deploy; the GitHub workflow is purely a "did I break it?" check.
+
+### Supply-chain note for CI / production
+
+The committed `.npmrc` caps installs to versions published before a fixed date (currently `2026-04-15`). CI and Cloudflare honour the same cutoff via the committed `package-lock.json`. Before adding or upgrading dependencies, run `npm run refresh-npm-min-age` locally so the cutoff rolls forward to *today minus 30 days*.
+
 ## Privacy
 
 10Block does not phone home. Once the static assets are loaded (or precached for offline play), nothing — score, mute setting, last game — leaves your device. `localStorage` is the only persistence layer.
