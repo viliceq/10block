@@ -1,6 +1,8 @@
-# Blockly — Block Puzzle Game Specification
+# 10Block — Block Puzzle Game Specification
 
-A 10×10 block-placement puzzle in the style of *Block Blast* / *1010!* / *Wood Block Puzzle*, built as a Progressive Web App for iPad (Safari) and playable on iPhone.
+A free, open-source 10×10 block-placement puzzle in the style of *Block Blast* / *1010!* / *Wood Block Puzzle*, built as a Progressive Web App for iPad (Safari), iPhone, and any platform with a modern browser.
+
+*"Blockly" remains the repo / package codename for historical reasons; "10Block" is the user-facing brand.*
 
 This document defines the game's rules, scoring, and product scope. Implementation details (framework, file layout, asset pipeline) are intentionally out of scope and will be decided when work starts.
 

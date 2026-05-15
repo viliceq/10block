@@ -42,8 +42,8 @@ describe('PWA — vite.config.ts', () => {
     expect(viteConfig).toMatch(/registerType:\s*['"]autoUpdate['"]/);
   });
 
-  it('names the app "Blockly"', () => {
-    expect(viteConfig).toMatch(/name:\s*['"]Blockly['"]/);
+  it('names the app "10Block"', () => {
+    expect(viteConfig).toMatch(/name:\s*['"]10Block['"]/);
   });
 
   it('declares both 192 and 512 icons', () => {
