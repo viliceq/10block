@@ -110,7 +110,7 @@ The committed `.npmrc` caps installs to versions published before a fixed date (
 
 ## Licence
 
-*To be decided.* The intent is an OSI-approved permissive licence (MIT or Apache 2.0); pick one before the first public release.
+[MIT](./LICENSE) © 2026 viliceq. Use it, fork it, ship it.
 
 ## Acknowledgements
 
