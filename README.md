@@ -6,7 +6,9 @@
 
 ## Play
 
-> Public URL: *pending deploy.* In the meantime, see **Run it yourself** below.
+**→ [10block.pages.dev](https://10block.pages.dev)**
+
+Or run it locally — see **Run it yourself** below.
 
 ## How it works
 
@@ -75,29 +77,32 @@ Why this approach: the codebase has stayed under ~2 000 lines of source through 
 
 ## Deployment
 
-10Block deploys on **Cloudflare Pages** at *<URL pending>*.
+10Block deploys on **Cloudflare Pages** at [10block.pages.dev](https://10block.pages.dev), via GitHub Actions (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+Deployment is driven entirely from GitHub Actions — Cloudflare's own Git-connected build is **not** used (its unified Workers-Builds flow is awkward for static Pages sites and its auto-generated build token is Workers-scoped, not Pages-scoped). The Cloudflare project is a plain **Direct Upload** Pages project; GitHub Actions pushes to it with `wrangler pages deploy`.
 
 To set up your own deploy:
 
 1. Push the repo to GitHub.
-2. In the Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**, pick the repo.
-3. Build settings:
-   - **Framework preset:** None (or Vite — both work)
-   - **Build command:** `npm install && npm run build`
-   - **Build output directory:** `dist`
-   - **Root directory:** *(leave empty)*
-   - **Environment variables:** `NODE_VERSION = 22`
-4. Save & Deploy. Each subsequent push to `main` redeploys automatically.
+2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Upload assets** (the *non*-Git path). Name the project `10block`, production branch `main`. Do one manual upload of a `dist/` build to establish the project.
+3. Create a Cloudflare API token scoped to **Account · Cloudflare Pages · Edit**.
+4. Add two GitHub repository secrets:
+   - `CLOUDFLARE_API_TOKEN` — the token from step 3
+   - `CLOUDFLARE_ACCOUNT_ID` — your Cloudflare account ID
+5. Push to `main`. The `deploy` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after the test job passes and ships `dist/`.
 
-Cloudflare serves the static files (HTML, JS, CSS, MP3s, icons) on a global CDN with HTTPS by default — everything a PWA's service worker needs. The default URL is `https://<project>.pages.dev`; a custom domain can be added later in the project's Cloudflare settings.
+Cloudflare serves the static files (HTML, JS, CSS, MP3s, icons) on a global CDN with HTTPS by default — everything a PWA's service worker needs. A custom domain can be added later in the project's Cloudflare settings.
 
-### CI
+### CI / CD
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs type-check + unit tests + production build on every push and PR. Cloudflare's own build is the source of truth for the production deploy; the GitHub workflow is purely a "did I break it?" check.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) has two jobs:
+
+- **test** — type-check + 288 unit tests + production build, on every push and PR.
+- **deploy** — runs only on push to `main`, only after `test` is green; builds and `wrangler pages deploy dist`. Tests gate the deploy.
 
 ### Supply-chain note for CI / production
 
-The committed `.npmrc` caps installs to versions published before a fixed date (currently `2026-04-15`). CI and Cloudflare honour the same cutoff via the committed `package-lock.json`. Before adding or upgrading dependencies, run `npm run refresh-npm-min-age` locally so the cutoff rolls forward to *today minus 30 days*.
+The committed `.npmrc` caps installs to versions published before a fixed date (currently `2026-04-15`). GitHub Actions honours the same cutoff via the committed `package-lock.json` (`npm ci`). Before adding or upgrading dependencies, run `npm run refresh-npm-min-age` locally so the cutoff rolls forward to *today minus 30 days*, then commit the updated `.npmrc` + lockfile.
 
 ## Privacy
 
