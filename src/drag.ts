@@ -16,11 +16,19 @@ type ActiveDrag = {
   /** Half of `--cell-size` at drag start. The ghost's top-left bbox cell is
    *  centred on the pointer by subtracting this from clientX/clientY. */
   pointerOffset: number;
+  /** Vertical lift for touch pointers so the dragged piece floats above the
+   *  fingertip; hit-testing uses the lifted point. 0 for mouse / pen. */
+  touchLift: number;
 };
 
 /** Mirrors the iPad default for `--cell-size` in `src/styles/tokens.css`.
  *  A token-vs-fallback drift test in `tests/tokens.test.ts` keeps these in sync. */
 export const CELL_SIZE_FALLBACK = 64;
+
+/** How far above a touch point the dragged piece floats so the fingertip
+ *  doesn't occlude the landing target. Behavioural constant, not a CSS token
+ *  (it never appears in any stylesheet). */
+const TOUCH_LIFT_PX = 64;
 
 function readCellSize(): number {
   const raw = getComputedStyle(document.documentElement).getPropertyValue('--cell-size');
@@ -49,8 +57,9 @@ export function createDrag(
     if (!piece) return;
 
     const pointerOffset = readCellSize() / 2;
+    const touchLift = e.pointerType === 'touch' ? TOUCH_LIFT_PX : 0;
     const ghost = createGhost(piece);
-    positionGhost(ghost, e.clientX, e.clientY, pointerOffset);
+    positionGhost(ghost, e.clientX, e.clientY, pointerOffset, touchLift);
     document.body.appendChild(ghost);
     slot.dataset['picked'] = 'true';
 
@@ -60,14 +69,27 @@ export function createDrag(
       // setPointerCapture may not be supported in some test environments.
     }
 
-    active = { pointerId: e.pointerId, slotIndex, slot, ghost, pointerOffset };
+    active = {
+      pointerId: e.pointerId,
+      slotIndex,
+      slot,
+      ghost,
+      pointerOffset,
+      touchLift,
+    };
     audio.pickup();
   }
 
   function onPointerMove(e: PointerEvent): void {
     if (!active || e.pointerId !== active.pointerId) return;
-    positionGhost(active.ghost, e.clientX, e.clientY, active.pointerOffset);
-    updatePreview(e.clientX, e.clientY);
+    positionGhost(
+      active.ghost,
+      e.clientX,
+      e.clientY,
+      active.pointerOffset,
+      active.touchLift,
+    );
+    updatePreview(e.clientX, e.clientY - active.touchLift);
   }
 
   function updatePreview(x: number, y: number): void {
@@ -126,7 +148,11 @@ export function createDrag(
 
   function onPointerUp(e: PointerEvent): void {
     if (!active || e.pointerId !== active.pointerId) return;
-    finishDrag({ x: e.clientX, y: e.clientY, place: true });
+    finishDrag({
+      x: e.clientX,
+      y: e.clientY - active.touchLift,
+      place: true,
+    });
   }
 
   function onPointerCancel(e: PointerEvent): void {
@@ -176,8 +202,9 @@ function positionGhost(
   x: number,
   y: number,
   offset: number,
+  lift: number,
 ): void {
-  ghost.style.transform = `translate3d(${x - offset}px, ${y - offset}px, 0)`;
+  ghost.style.transform = `translate3d(${x - offset}px, ${y - offset - lift}px, 0)`;
 }
 
 function findBoardCell(x: number, y: number): { row: number; col: number } | null {

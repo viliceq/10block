@@ -99,8 +99,8 @@ describe('tokens.css — layout tokens', () => {
 
     it('overrides the tray-cell-size and tray-slot-size tokens', () => {
       const block = mediaBlock(tokens);
-      expect(block).toMatch(/--tray-cell-size\s*:\s*16px/i);
-      expect(block).toMatch(/--tray-slot-size\s*:\s*84px/i);
+      expect(block).toMatch(/--tray-cell-size\s*:\s*20px/i);
+      expect(block).toMatch(/--tray-slot-size\s*:\s*112px/i);
     });
 
     it('keeps the iPhone board width within iPhone SE viewport (375px)', () => {

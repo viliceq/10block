@@ -212,3 +212,27 @@ describe('board.css — placement animation', () => {
     );
   });
 });
+
+describe('board.css — touch hygiene', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let css = '';
+
+  beforeAll(() => {
+    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+  });
+
+  it('disables text selection and the iOS callout', () => {
+    expect(css).toMatch(/user-select:\s*none/);
+    expect(css).toMatch(/-webkit-user-select:\s*none/);
+    expect(css).toMatch(/-webkit-touch-callout:\s*none/);
+  });
+
+  it('prevents pull-to-refresh / rubber-banding', () => {
+    expect(css).toMatch(/overscroll-behavior:\s*none/);
+  });
+
+  it('sets touch-action: none on the play surfaces', () => {
+    expect(css).toMatch(/touch-action:\s*none/);
+    expect(css).toMatch(/\.board\b/);
+  });
+});

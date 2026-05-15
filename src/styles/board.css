@@ -5,6 +5,23 @@ body {
   color: var(--color-text);
   font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
+
+  /* Touch hygiene: the game is a drag surface, not a document. Stop iOS
+   * Safari from treating a press-hold as a text selection (which raises the
+   * loupe, shifts the effective touch point, and leaves a selection range). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+
+/* The browser must not scroll/zoom/select while a pointer is down on a play
+ * surface — the drag layer owns those gestures. */
+#app,
+.board,
+.tray,
+.ghost {
+  touch-action: none;
 }
 
 body {

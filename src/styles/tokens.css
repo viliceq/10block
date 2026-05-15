@@ -53,7 +53,7 @@
     --cell-gap: 2px;
     --board-pad: 6px;
     --screen-pad: 12px;
-    --tray-cell-size: 16px;
-    --tray-slot-size: 84px;
+    --tray-cell-size: 20px;
+    --tray-slot-size: 112px;
   }
 }

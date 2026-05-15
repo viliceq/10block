@@ -345,6 +345,48 @@ describe('createDrag — audio', () => {
   });
 });
 
+describe('createDrag — touch finger-lift', () => {
+  it('lifts the ghost above the finger for touch pointers', () => {
+    const h = setup();
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    pmove({ pointerType: 'touch', clientX: 120, clientY: 200 });
+    const ghost = document.body.querySelector<HTMLElement>('.ghost');
+    // jsdom getComputedStyle returns "" → CELL_SIZE_FALLBACK 64 → offset 32.
+    // TOUCH_LIFT_PX = 64. x: 120 - 32 = 88. y: 200 - 32 - 64 = 104.
+    expect(ghost?.style.transform).toContain('translate3d(88px, 104px, 0');
+  });
+
+  it('hit-tests at the lifted position on a touch drop', () => {
+    const h = setup();
+    const spy = vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    pup({ pointerType: 'touch', clientX: 150, clientY: 220 });
+    expect(spy).toHaveBeenCalledWith(150, 220 - 64);
+  });
+
+  it('does not lift for mouse pointers (iteration-10 behaviour preserved)', () => {
+    const h = setup();
+    const spy = vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    pdown(slot(h, 0), { pointerType: 'mouse' });
+    pup({ pointerType: 'mouse', clientX: 150, clientY: 220 });
+    expect(spy).toHaveBeenCalledWith(150, 220);
+  });
+
+  it('previews at the lifted target during a touch drag', () => {
+    const h = setup();
+    const piece = h.game.trayPieces[0];
+    if (!piece) throw new Error('no piece');
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([
+      boardCell(h, 3, 3),
+    ]);
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    pmove({ pointerType: 'touch', clientX: 100, clientY: 300 });
+    for (const [r, c] of piece.cells) {
+      expect(boardCell(h, 3 + r, 3 + c).dataset['state']).toBe('preview-ok');
+    }
+  });
+});
+
 describe('createDrag — game over gate', () => {
   it('does not start a drag when game.gameOver is true', () => {
     document.body.innerHTML = '';
