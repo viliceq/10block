@@ -9,6 +9,7 @@
   gap: var(--screen-pad);
   background: var(--color-overlay-backdrop);
   color: var(--color-text);
+  transition: opacity var(--anim-duration) var(--anim-easing);
 }
 
 .overlay[data-visible='false'] {

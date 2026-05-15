@@ -4,6 +4,7 @@ import './styles/tray.css';
 import './styles/drag.css';
 import './styles/hud.css';
 import './styles/overlay.css';
+import './styles/combo.css';
 import { createGame } from './game';
 import { createDrag } from './drag';
 import { createAudio } from './audio';

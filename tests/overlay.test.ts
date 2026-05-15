@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { createOverlay, renderOverlay } from '../src/overlay';
 
 describe('createOverlay()', () => {
@@ -38,5 +41,18 @@ describe('renderOverlay()', () => {
     renderOverlay(el, { visible: false, score: 999 });
     expect(el.querySelector('.overlay__heading')?.textContent).toBe('GAME OVER');
     expect(el.querySelector('.overlay__button')?.textContent).toBe('New game');
+  });
+});
+
+describe('overlay.css — fade-in', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let css = '';
+
+  beforeAll(() => {
+    css = readFileSync(resolve(here, '../src/styles/overlay.css'), 'utf-8');
+  });
+
+  it('transitions opacity on the .overlay element', () => {
+    expect(css).toMatch(/\.overlay\s*\{[^}]*transition:[^;]*opacity/);
   });
 });

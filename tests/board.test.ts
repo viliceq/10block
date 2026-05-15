@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { createBoard, renderBoardState } from '../src/board';
 import {
   createEmptyBoard,
@@ -182,5 +185,30 @@ describe('renderBoardState()', () => {
     const snapshot = JSON.parse(JSON.stringify(state));
     renderBoardState(boardEl, state);
     expect(JSON.parse(JSON.stringify(state))).toEqual(snapshot);
+  });
+});
+
+describe('board.css — placement animation', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let css = '';
+
+  beforeAll(() => {
+    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+  });
+
+  it('declares the cellAppear keyframes', () => {
+    expect(css).toMatch(/@keyframes\s+cellAppear/);
+  });
+
+  it('animates opacity 0 → 1 and scale 0.85 → 1', () => {
+    // Match keyframes containing both opacity transitions and the scale.
+    expect(css).toMatch(/opacity:\s*0/);
+    expect(css).toMatch(/scale\(0\.85\)/);
+  });
+
+  it('runs the animation on the filled state', () => {
+    expect(css).toMatch(
+      /\.board__cell\[data-state=['"]filled['"]\][^{]*\{[^}]*animation:[^;]*cellAppear/,
+    );
   });
 });

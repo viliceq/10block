@@ -75,4 +75,11 @@ describe('main.ts entry point', () => {
     const button = app?.querySelector<HTMLButtonElement>('.hud__mute');
     expect(button).not.toBeNull();
   });
+
+  it('mounts a combo callout hidden by default', () => {
+    const app = document.getElementById('app');
+    const callout = app?.querySelector<HTMLElement>('.combo-callout');
+    expect(callout).not.toBeNull();
+    expect(callout?.dataset['visible']).toBe('false');
+  });
 });

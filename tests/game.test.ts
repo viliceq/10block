@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 beforeEach(() => {
   localStorage.clear();
@@ -589,6 +589,121 @@ describe('Game — audio events', () => {
     game.mount(document.createElement('div'));
     game.place(0, 5, 5);
     expect(rec.calls).toEqual(['gameOver']);
+  });
+});
+
+describe('Game — combo callout', () => {
+  type AudioSpyApi = {
+    pickup: () => void;
+    place: () => void;
+    reject: () => void;
+    clear: () => void;
+    combo: () => void;
+    perfect: () => void;
+    gameOver: () => void;
+    setMuted: () => void;
+    isMuted: () => boolean;
+    unlock: () => void;
+  };
+
+  function silentAudio(): AudioSpyApi {
+    return {
+      pickup: () => {},
+      place: () => {},
+      reject: () => {},
+      clear: () => {},
+      combo: () => {},
+      perfect: () => {},
+      gameOver: () => {},
+      setMuted: () => {},
+      isMuted: () => false,
+      unlock: () => {},
+    };
+  }
+
+  function makeBoard(
+    fills: ReadonlyArray<readonly [number, number, CellState]>,
+  ): BoardState {
+    const board: CellState[][] = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => null) as CellState[],
+    );
+    for (const [r, c, v] of fills) {
+      const row = board[r];
+      if (row) row[c] = v;
+    }
+    return board;
+  }
+
+  function setupComboScenario(): {
+    game: GameApi;
+    root: HTMLElement;
+  } {
+    const seed = findSeedWithPieces(([a]) => a === 'single');
+    const fills: Array<[number, number, CellState]> = [];
+    for (let c = 0; c < 9; c++) fills.push([9, c, 'sq2']);
+    for (let r = 0; r < 9; r++) fills.push([r, 9, 'sq2']);
+    fills.push([5, 5, 'sq2']);
+
+    const game = createGame({
+      rng: mulberry32(seed),
+      audio: silentAudio(),
+      initialBoard: makeBoard(fills),
+    });
+    const root = document.createElement('div');
+    game.mount(root);
+    return { game, root };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('starts with a hidden combo callout', () => {
+    const game = createGame({ rng: mulberry32(1), audio: silentAudio() });
+    const root = document.createElement('div');
+    game.mount(root);
+    const callout = root.querySelector<HTMLElement>('.combo-callout');
+    expect(callout).not.toBeNull();
+    expect(callout?.dataset['visible']).toBe('false');
+  });
+
+  it('does not show the callout on a non-combo placement', () => {
+    const game = createGame({ rng: mulberry32(1), audio: silentAudio() });
+    const root = document.createElement('div');
+    game.mount(root);
+    game.place(0, 0, 0);
+    const callout = root.querySelector<HTMLElement>('.combo-callout');
+    expect(callout?.dataset['visible']).toBe('false');
+  });
+
+  it('shows the callout with the streak count on a combo placement', () => {
+    const { game, root } = setupComboScenario();
+    game.place(0, 9, 9);
+    const callout = root.querySelector<HTMLElement>('.combo-callout');
+    expect(callout?.dataset['visible']).toBe('true');
+    expect(callout?.textContent).toBe(`COMBO ×${game.streak}`);
+  });
+
+  it('hides the callout after ~900ms', () => {
+    const { game, root } = setupComboScenario();
+    game.place(0, 9, 9);
+    const callout = root.querySelector<HTMLElement>('.combo-callout');
+    expect(callout?.dataset['visible']).toBe('true');
+    vi.advanceTimersByTime(1000);
+    expect(callout?.dataset['visible']).toBe('false');
+  });
+
+  it('newGame() hides the callout immediately', () => {
+    const { game, root } = setupComboScenario();
+    game.place(0, 9, 9);
+    const callout = root.querySelector<HTMLElement>('.combo-callout');
+    expect(callout?.dataset['visible']).toBe('true');
+    game.newGame();
+    expect(callout?.dataset['visible']).toBe('false');
   });
 });
 

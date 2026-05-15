@@ -29,10 +29,23 @@ body {
 .board__cell {
   background: var(--color-cell-empty);
   border-radius: var(--radius);
+  transform-origin: center;
 }
 
 .board__cell[data-state='filled'] {
   background: var(--piece-color);
+  animation: cellAppear var(--anim-duration) var(--anim-easing) both;
+}
+
+@keyframes cellAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .board__cell[data-state='preview-ok'] {

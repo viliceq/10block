@@ -52,6 +52,15 @@ function isBoardEmpty(board: BoardState): boolean {
   return true;
 }
 
+const COMBO_CALLOUT_DURATION_MS = 900;
+
+function createComboCallout(): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'combo-callout';
+  el.dataset['visible'] = 'false';
+  return el;
+}
+
 export function createGame(options: GameOptions = {}): GameApi {
   const rng = options.rng ?? Math.random;
   const audio = options.audio ?? createSilentAudio();
@@ -61,10 +70,30 @@ export function createGame(options: GameOptions = {}): GameApi {
   let streak = 0;
   let bestScore = loadBestScore();
   let gameOver = false;
+  let comboTimeoutId: ReturnType<typeof setTimeout> | null = null;
   const boardEl = createBoard();
   const trayEl = createTray();
   const hudEl = createHud();
   const overlayEl = createOverlay();
+  const comboEl = createComboCallout();
+
+  function showComboCallout(currentStreak: number): void {
+    comboEl.textContent = `COMBO ×${currentStreak}`;
+    comboEl.dataset['visible'] = 'true';
+    if (comboTimeoutId !== null) clearTimeout(comboTimeoutId);
+    comboTimeoutId = setTimeout(() => {
+      comboEl.dataset['visible'] = 'false';
+      comboTimeoutId = null;
+    }, COMBO_CALLOUT_DURATION_MS);
+  }
+
+  function hideComboCallout(): void {
+    if (comboTimeoutId !== null) {
+      clearTimeout(comboTimeoutId);
+      comboTimeoutId = null;
+    }
+    comboEl.dataset['visible'] = 'false';
+  }
 
   function refillTray(): void {
     tray = Array.from({ length: TRAY_SIZE }, () => samplePiece(rng));
@@ -143,6 +172,7 @@ export function createGame(options: GameOptions = {}): GameApi {
     root.appendChild(boardEl);
     root.appendChild(trayEl);
     root.appendChild(overlayEl);
+    root.appendChild(comboEl);
   }
 
   function place(slotIndex: number, anchorRow: number, anchorCol: number): void {
@@ -192,6 +222,7 @@ export function createGame(options: GameOptions = {}): GameApi {
       audio.perfect();
     } else if (L >= 2 || newStreak >= 2) {
       audio.combo();
+      showComboCallout(newStreak);
     } else if (L === 1) {
       audio.clear();
     } else {
@@ -208,6 +239,7 @@ export function createGame(options: GameOptions = {}): GameApi {
     refillTray();
     updateGameOver();
     clearLastGame();
+    hideComboCallout();
     render();
   }
 
