@@ -66,11 +66,12 @@ describe('createSilentAudio()', () => {
 });
 
 describe('createAudio() — iOS unlock prime', () => {
-  it('unlock() resumes the context and plays one empty buffer', () => {
+  it('unlock() resumes the context and plays one empty buffer after resume resolves', async () => {
     const s = spies();
     const audio = createAudio();
     audio.unlock();
-    expect(s.resume).toHaveBeenCalled();
+    expect(s.resume).toHaveBeenCalled(); // resume() is called synchronously
+    await flushBufferLoad(); // let resume().then(prime) settle
     expect(s.createBuffer).toHaveBeenCalledWith(1, 1, 22050);
     expect(s.start).toHaveBeenCalled();
   });
@@ -78,18 +79,19 @@ describe('createAudio() — iOS unlock prime', () => {
   it('primes exactly once across repeated unlock() and events', async () => {
     const s = spies();
     const audio = createAudio();
-    await flushBufferLoad();
     audio.unlock();
     audio.unlock();
     audio.pickup();
     audio.place();
+    await flushBufferLoad();
     expect(s.createBuffer).toHaveBeenCalledTimes(1);
   });
 
-  it('a first event primes even without an explicit unlock()', () => {
+  it('a first event primes even without an explicit unlock()', async () => {
     const s = spies();
     const audio = createAudio();
-    audio.pickup(); // rides the same gesture as the pickup, before main.ts unlock
+    audio.pickup(); // the pickup gesture itself must drive the unlock
+    await flushBufferLoad();
     expect(s.createBuffer).toHaveBeenCalled();
   });
 });
@@ -98,8 +100,9 @@ describe('createAudio() — playback', () => {
   it('starts a source for every event once buffers are loaded', async () => {
     const s = spies();
     const audio = createAudio();
-    await flushBufferLoad();
-    audio.unlock(); // consume the one-time prime
+    await flushBufferLoad(); // buffers decoded
+    audio.unlock();
+    await flushBufferLoad(); // resume().then(prime) settled; unlocked latched
     for (const m of EVENT_METHODS) {
       s.start.mockClear();
       (audio[m] as () => void)();
@@ -107,12 +110,12 @@ describe('createAudio() — playback', () => {
     }
   });
 
-  it('plays no cue before buffers finish loading', () => {
+  it('plays no cue synchronously before buffers load', () => {
+    // Nothing awaited: buffer fetch is in flight and the resume().then prime
+    // is still a pending microtask. fire() must not create a cue source.
     const s = spies();
     const audio = createAudio();
-    audio.unlock(); // primes now
-    s.createBufferSource.mockClear();
-    audio.pickup(); // buffers not loaded; prime already consumed
+    audio.pickup();
     expect(s.createBufferSource).not.toHaveBeenCalled();
   });
 });

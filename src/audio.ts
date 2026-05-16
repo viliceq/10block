@@ -86,27 +86,37 @@ export function createAudio(): AudioApi {
       });
   }
 
-  let primed = false;
+  let unlocked = false;
 
   // Canonical iOS unlock: inside a user gesture, resume the context AND push
-  // one empty buffer through it. resume() alone is enough on desktop but not
-  // on iOS standalone PWAs, where output stays silent until a buffer has
-  // actually flowed from a gesture. The prime runs exactly once per instance.
-  function ensureUnlocked(): void {
-    if (ctx.state === 'suspended') void ctx.resume();
-    if (primed) return;
-    primed = true;
+  // one empty buffer through it once the context is actually running.
+  // resume() is async, so the prime is chained to its resolution — playing
+  // the buffer into a still-suspended context (the iteration-22 bug) is a
+  // no-op. `unlocked` latches only once the prime truly runs, so every
+  // gesture retries until it sticks.
+  function primeIfRunning(): void {
+    if (unlocked) return;
+    if (ctx.state !== 'running') return;
     try {
       const silent = ctx.createBuffer(1, 1, 22050);
       const source = ctx.createBufferSource();
       source.buffer = silent;
       source.connect(ctx.destination);
       source.start(0);
+      unlocked = true;
     } catch {
-      // Some environments reject createBuffer pre-gesture; the next gesture
-      // retries via fire()/unlock() (primed is only set on success-path here,
-      // but a thrown createBuffer leaves primed = true; that's acceptable —
-      // resume() on subsequent events still drives output once allowed).
+      // Leave unlocked = false so the next gesture retries.
+    }
+  }
+
+  function ensureUnlocked(): void {
+    if (unlocked) return;
+    if (ctx.state === 'suspended') {
+      void ctx.resume().then(primeIfRunning, () => {
+        // resume() rejected (no gesture yet) — a later gesture retries.
+      });
+    } else {
+      primeIfRunning();
     }
   }
 

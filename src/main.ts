@@ -21,11 +21,14 @@ if (app) {
     createDrag(game, trayEl, boardEl, audio);
   }
 
-  // iOS Safari requires a user gesture before audio can play. Wire a one-shot
-  // unlock on the first pointerdown anywhere on the page.
-  const onFirstInteraction = (): void => {
+  // iOS requires a user gesture before audio can play. unlock() is
+  // idempotent (no-op once the context is running), so bind it to several
+  // gesture types and leave the listeners attached — a real `click` (e.g.
+  // the Mute button) is the gold-standard activation and will also drive it.
+  const tryUnlock = (): void => {
     audio.unlock();
-    document.removeEventListener('pointerdown', onFirstInteraction);
   };
-  document.addEventListener('pointerdown', onFirstInteraction);
+  document.addEventListener('pointerdown', tryUnlock);
+  document.addEventListener('touchend', tryUnlock);
+  document.addEventListener('click', tryUnlock);
 }
