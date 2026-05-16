@@ -86,13 +86,33 @@ export function createAudio(): AudioApi {
       });
   }
 
-  function resumeIfSuspended(): void {
+  let primed = false;
+
+  // Canonical iOS unlock: inside a user gesture, resume the context AND push
+  // one empty buffer through it. resume() alone is enough on desktop but not
+  // on iOS standalone PWAs, where output stays silent until a buffer has
+  // actually flowed from a gesture. The prime runs exactly once per instance.
+  function ensureUnlocked(): void {
     if (ctx.state === 'suspended') void ctx.resume();
+    if (primed) return;
+    primed = true;
+    try {
+      const silent = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = silent;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      // Some environments reject createBuffer pre-gesture; the next gesture
+      // retries via fire()/unlock() (primed is only set on success-path here,
+      // but a thrown createBuffer leaves primed = true; that's acceptable —
+      // resume() on subsequent events still drives output once allowed).
+    }
   }
 
   function fire(name: EventKey): void {
     if (muted) return;
-    resumeIfSuspended();
+    ensureUnlocked();
     const buffer = buffers.get(name);
     if (buffer) {
       const source = ctx.createBufferSource();
@@ -103,7 +123,7 @@ export function createAudio(): AudioApi {
     vibrate(HAPTICS[name]);
   }
 
-  return build(fire, resumeIfSuspended, setMuted, isMuted);
+  return build(fire, ensureUnlocked, setMuted, isMuted);
 }
 
 function build(

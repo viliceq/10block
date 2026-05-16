@@ -108,6 +108,14 @@ class FakeAudioContext {
     return Promise.resolve({});
   }
 
+  public createBuffer(
+    _channels: number,
+    _length: number,
+    _sampleRate: number,
+  ): unknown {
+    return {};
+  }
+
   public createBufferSource(): FakeAudioBufferSourceNode {
     return new FakeAudioBufferSourceNode();
   }

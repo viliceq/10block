@@ -14,16 +14,22 @@ beforeEach(() => {
 });
 
 /** Let the fetch → arrayBuffer → decodeAudioData chains settle so the audio
- *  module's buffers populate. The setup.ts stubs all resolve immediately, so
- *  a handful of microtask turns plus one macrotask is deterministic. */
+ *  module's buffers populate. The setup.ts stubs all resolve immediately. */
 async function flushBufferLoad(): Promise<void> {
   for (let i = 0; i < 8; i++) await Promise.resolve();
   await new Promise((r) => setTimeout(r));
 }
 
-function sourceStartSpy(): ReturnType<typeof vi.spyOn> {
-  const proto = Object.getPrototypeOf(new AudioContext().createBufferSource());
-  return vi.spyOn(proto, 'start');
+function spies() {
+  const sourceProto = Object.getPrototypeOf(
+    new AudioContext().createBufferSource(),
+  );
+  return {
+    resume: vi.spyOn(AudioContext.prototype, 'resume'),
+    createBuffer: vi.spyOn(AudioContext.prototype, 'createBuffer'),
+    createBufferSource: vi.spyOn(AudioContext.prototype, 'createBufferSource'),
+    start: vi.spyOn(sourceProto, 'start'),
+  };
 }
 
 const EVENT_METHODS: Array<keyof AudioApi> = [
@@ -59,35 +65,67 @@ describe('createSilentAudio()', () => {
   });
 });
 
-describe('createAudio() — playback', () => {
-  it('starts a buffer source for every event once buffers are loaded', async () => {
-    const startSpy = sourceStartSpy();
+describe('createAudio() — iOS unlock prime', () => {
+  it('unlock() resumes the context and plays one empty buffer', () => {
+    const s = spies();
+    const audio = createAudio();
+    audio.unlock();
+    expect(s.resume).toHaveBeenCalled();
+    expect(s.createBuffer).toHaveBeenCalledWith(1, 1, 22050);
+    expect(s.start).toHaveBeenCalled();
+  });
+
+  it('primes exactly once across repeated unlock() and events', async () => {
+    const s = spies();
     const audio = createAudio();
     await flushBufferLoad();
+    audio.unlock();
+    audio.unlock();
+    audio.pickup();
+    audio.place();
+    expect(s.createBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it('a first event primes even without an explicit unlock()', () => {
+    const s = spies();
+    const audio = createAudio();
+    audio.pickup(); // rides the same gesture as the pickup, before main.ts unlock
+    expect(s.createBuffer).toHaveBeenCalled();
+  });
+});
+
+describe('createAudio() — playback', () => {
+  it('starts a source for every event once buffers are loaded', async () => {
+    const s = spies();
+    const audio = createAudio();
+    await flushBufferLoad();
+    audio.unlock(); // consume the one-time prime
     for (const m of EVENT_METHODS) {
-      startSpy.mockClear();
+      s.start.mockClear();
       (audio[m] as () => void)();
-      expect(startSpy, `${String(m)} should start a source`).toHaveBeenCalledTimes(1);
+      expect(s.start, `${String(m)} should start a source`).toHaveBeenCalledTimes(1);
     }
   });
 
-  it('does not start a source before buffers finish loading', () => {
-    const startSpy = sourceStartSpy();
+  it('plays no cue before buffers finish loading', () => {
+    const s = spies();
     const audio = createAudio();
-    audio.pickup(); // buffers still in flight
-    expect(startSpy).not.toHaveBeenCalled();
+    audio.unlock(); // primes now
+    s.createBufferSource.mockClear();
+    audio.pickup(); // buffers not loaded; prime already consumed
+    expect(s.createBufferSource).not.toHaveBeenCalled();
   });
 });
 
 describe('createAudio() — mute', () => {
-  it('creates no source when muted', async () => {
-    const startSpy = sourceStartSpy();
+  it('creates no source and does not prime when muted', () => {
+    const s = spies();
     const audio = createAudio();
-    await flushBufferLoad();
     audio.setMuted(true);
     audio.pickup();
     audio.gameOver();
-    expect(startSpy).not.toHaveBeenCalled();
+    expect(s.createBufferSource).not.toHaveBeenCalled();
+    expect(s.createBuffer).not.toHaveBeenCalled();
   });
 
   it('skips vibration when muted', () => {
@@ -112,18 +150,11 @@ describe('createAudio() — mute', () => {
 });
 
 describe('createAudio() — context resume', () => {
-  it('unlock() resumes a suspended context', () => {
-    const resumeSpy = vi.spyOn(AudioContext.prototype, 'resume');
-    const audio = createAudio();
-    audio.unlock();
-    expect(resumeSpy).toHaveBeenCalled();
-  });
-
   it('an event resumes a suspended context (self-heal)', () => {
-    const resumeSpy = vi.spyOn(AudioContext.prototype, 'resume');
+    const s = spies();
     const audio = createAudio();
     audio.pickup();
-    expect(resumeSpy).toHaveBeenCalled();
+    expect(s.resume).toHaveBeenCalled();
   });
 });
 
