@@ -17,7 +17,7 @@ A small, dependency-light web game that a parent and child can play on a shared 
 - **Runtime:** Browser (Safari on iPadOS primary target; iPhone Safari and desktop Chrome/Safari supported as secondary).
 - **Distribution:** Static site, installable as a PWA via "Add to Home Screen". Full-screen, no browser chrome when launched from the home screen.
 - **Offline:** After first load, all assets are cached by a service worker; the game is fully playable offline.
-- **Orientation:** Both portrait and landscape on iPad; portrait only on iPhone.
+- **Orientation:** Both portrait and landscape, on **both** iPhone and iPad. The single adaptive layout (§8.7, §8.9) re-fits the board to the safe space on rotation; orientation is never locked.
 - **No backend.** No network calls during gameplay.
 
 ## 3. Game World
@@ -179,7 +179,7 @@ The game ends when **none of the three pieces currently in the tray can be legal
 
 - **Rendering:** DOM only. The board is 100 `<div class="board__cell">` elements in a CSS Grid. The tray is 3 slot containers, each a small CSS Grid. **No Canvas, no SVG.**
 - **Layout primitive:** CSS Grid is the *only* layout system inside the game. No flex, no floats, no absolute positioning except for the dragged-piece ghost. One mental model end to end.
-- **Sizing:** integer pixels via design tokens (see §8.3). Cell size and gap are declared once and consumed everywhere. No `%`, no `vw` inside the board. Viewport units only at the outermost centring container.
+- **Sizing:** the board is the **largest whole-pixel-celled square that fits the safe usable rectangle minus the auxiliary panel** (HUD + tray), in *either* orientation. `--cell-size` is **derived, not hard-coded**: a layout module measures the safe usable box and sets `--cell-size = floor(boardEdge / 10)` on `:root` (an integer px), recomputed on resize and `orientationchange`. Cell *gap*, *pad*, and *radius* remain static tokens. The grid itself still contains **no fractional units** — integer cell px is preserved, so no sub-pixel seams (the day-one invariant). Spare pixels (the `boardEdge mod 10` remainder) become even outer margin, never sub-pixel cell distribution. See §8.9.
 
 ### 8.2 CSS architecture
 
@@ -190,24 +190,15 @@ The game ends when **none of the three pieces currently in the tray can be legal
 
 ### 8.3 Design tokens
 
-Declared in `src/styles/tokens.css`. On narrow viewports (iPhone portrait, `@media (max-width: 430px)`) a media block overrides the sizing tokens so the whole game fits on small phones:
+Declared in `src/styles/tokens.css`. **Sizing is no longer chosen by device-width media queries** (that approach caused the landscape collapse — see §8.9). Instead:
 
-| Token | iPad default | iPhone override |
-|---|---|---|
-| `--cell-size` | 64px | 32px |
-| `--cell-gap` | 4px | 2px |
-| `--board-pad` | 12px | 6px |
-| `--screen-pad` | 24px | 12px |
-| `--tray-cell-size` | 28px | 16px |
-| `--tray-slot-size` | 168px | 84px |
-
-Sizing math: board = `10 × 32 + 9 × 2 + 2 × 6 = 350px`; layout = `350 + 24 = 374px`. Fits iPhone SE (375px) and every newer iPhone in portrait.
-
-Colours, motion tokens, and z-index tokens are not overridden.
+- `--cell-size`, `--tray-cell-size`, `--tray-slot-size` are **runtime-derived**: the layout module measures the safe usable box for the current orientation and writes integer-px values onto `:root`. `tokens.css` declares only first-paint fallback values for them (used for the split-second before the layout module runs).
+- `--cell-gap`, `--board-pad`, `--screen-pad`, `--radius`, all colours, motion, and z-index tokens are **static** and orientation-independent.
+- There is **no `@media (max-width: …)` breakpoint** for sizing. The single adaptive layout (§8.7) keys off the **aspect ratio** (`@media (orientation: …)` / the layout module), not device width.
 
 ```
 /* layout */
---cell-size: 64px;     /* iPad portrait */
+--cell-size: 64px;     /* first-paint fallback; live value derived per §8.1 */
 --cell-gap: 4px;
 --board-pad: 12px;
 --radius: 6px;
@@ -246,7 +237,7 @@ Colours, motion tokens, and z-index tokens are not overridden.
 - One duration token (`--anim-duration` = 180ms).
 - Clear: `opacity` 1 → 0.
 - Placement: `opacity` + `transform: scale(0.85 → 1)`.
-- Combo callout: `opacity` pulse, fixed position, no layout shift.
+- Combo callout: `opacity` pulse, no layout shift. It is positioned **within the safe content box** (anchored to the HUD region, never the raw viewport top) so it can never land under the camera / Dynamic Island / status bar — see §8.9.
 - `@media (prefers-reduced-motion: reduce)` zeroes all transitions.
 
 ### 8.6 Typography
@@ -258,10 +249,19 @@ Colours, motion tokens, and z-index tokens are not overridden.
 
 ### 8.7 Layout structure
 
-- **Screen:** vertical stack — HUD on top, board centred, tray below (portrait). On iPad landscape, tray sits to the right of the board.
-- **Board:** square, 10×10 cells, surrounded by `--board-pad` on all sides.
-- **Tray:** 3 equally-sized slots; each slot ≥ 96px on iPad so a piece can be comfortably tapped and grabbed.
-- **HUD:** current score (large, tabular) and best score side by side.
+One adaptive layout, switched by **aspect ratio / orientation** (never device width). The board is always sized (§8.1, §8.9) to the dimension the chosen arrangement constrains, so it is always as large as the safe space allows.
+
+- **Portrait (taller than wide):** vertical stack inside the safe box — HUD on top, board centred and **filling the safe width**, tray below the board. The board's size is constrained by the safe *width*.
+
+- **Landscape (wider than tall):** the board is hugged to the **safe left edge and fills the safe height**; a single right-hand **side panel** holds the HUD on top and the 3-piece tray below it. The board's size is constrained by the safe *height*. HUD and tray never sit above/below the board in landscape (that is the small-board failure mode being designed out).
+
+- **Board:** square, 10×10 cells, `--board-pad` on all sides, centred within whichever axis it does not fill.
+
+- **Tray:** 3 equally-sized slots. The whole slot is the touch target; each slot stays ≥ the §8.8 minimum hit target in both orientations.
+
+- **HUD:** current score and best score (large, tabular) plus the mute toggle. Lays out as a row in portrait, a column-friendly block in the landscape side panel.
+
+- **Game-over overlay** and **start gate** remain full-viewport (`position: fixed; inset: 0`) and unaffected by orientation; their content is centred within the safe box.
 
 ### 8.8 Touch & accessibility
 
@@ -269,6 +269,24 @@ Colours, motion tokens, and z-index tokens are not overridden.
 - `prefers-reduced-motion` respected (see §8.5).
 - Contrast: all foreground/background pairs hit WCAG AA (4.5:1) at minimum.
 - Game-over and combo states announced via `aria-live` regions in addition to visuals.
+
+### 8.9 Safe area & responsive sizing (load-bearing layout principles)
+
+These exist because the original width-breakpoint + fixed-pixel model broke in two fundamental ways: (a) transient UI rendered under the camera / Dynamic Island in portrait; (b) landscape fell back to iPad pixel sizes on a short viewport, so the board overflowed and the tray dropped below the fold.
+
+**Safe area is mandatory.**
+
+- `index.html` already sets `<meta name="viewport" … viewport-fit=cover>`. Every shell edge that bounds content uses `max(<token>, env(safe-area-inset-<side>))` on **all four sides**, so content clears the notch/camera/Dynamic Island (top in portrait; the left or right edge in landscape, depending on rotation) and the home indicator (bottom). This applies in both orientations.
+- No fixed/absolutely-positioned element (combo callout, overlay content, start gate content) may occupy the inset zone. Such elements are positioned relative to the **safe content box**, not the raw viewport.
+
+**The board fits the safe space; it never clips or scrolls off.**
+
+- Board edge = `min(safe constrained dimension for the current arrangement) − auxiliary panel − pads`. Cell = `floor(edge / 10)` (integer px, §8.1). Recomputed on `resize` and `orientationchange`.
+- The board is the priority element: it is always fully visible. If the derived cell size would fall below the **minimum legible/touch floor** (see §8.8; floor TBD during planning, candidate 24px), the page may scroll **as a graceful last resort** — but the board itself is never cropped, and this should not occur on any supported device in either orientation.
+
+**Orientation is aspect-driven, not device-driven.** Layout branches on `orientation` (portrait/landscape), not on `max-width`. The same rules produce a correct layout on iPhone, iPad, and desktop at any window size — there are no device-class assumptions.
+
+**Acceptance (must hold on iPhone & iPad, both orientations):** the entire board is visible without scrolling; the tray is reachable without scrolling; no HUD/board/tray/callout pixel sits under a safe-area inset; rotating the device re-fits within one frame with no sub-pixel seams.
 
 ## 9. Audio & Haptics
 
@@ -321,4 +339,4 @@ The game is shippable when **all** of the following hold:
 
 ---
 
-*Spec version: v1 draft, 2026-05-13 — visual design locked.*
+*Spec version: v1, 2026-05-16 — §8 layout reworked: aspect-driven orientation, safe-area mandate, runtime-derived whole-pixel board sizing (supersedes the width-breakpoint model).*
