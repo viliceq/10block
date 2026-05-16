@@ -80,3 +80,65 @@ if (!ls || typeof ls.clear !== 'function') {
 beforeEach(() => {
   localStorage.clear();
 });
+
+// jsdom implements neither the Web Audio API nor a usable `fetch` for the
+// audio module. Polyfill minimal stand-ins so `createAudio()` (exercised
+// directly by audio.test.ts and indirectly by page-mount via main.ts) runs
+// without throwing, and so the buffer-load pipeline settles deterministically.
+class FakeAudioBufferSourceNode {
+  public buffer: unknown = null;
+  public connect(): void {
+    // no-op
+  }
+  public start(): void {
+    // spied via prototype in audio.test.ts
+  }
+}
+
+class FakeAudioContext {
+  public state: 'suspended' | 'running' | 'closed' = 'suspended';
+  public readonly destination = {};
+
+  public resume(): Promise<void> {
+    this.state = 'running';
+    return Promise.resolve();
+  }
+
+  public decodeAudioData(_data: ArrayBuffer): Promise<unknown> {
+    return Promise.resolve({});
+  }
+
+  public createBufferSource(): FakeAudioBufferSourceNode {
+    return new FakeAudioBufferSourceNode();
+  }
+
+  public close(): Promise<void> {
+    this.state = 'closed';
+    return Promise.resolve();
+  }
+}
+
+if (typeof (globalThis as { AudioContext?: unknown }).AudioContext === 'undefined') {
+  Object.defineProperty(globalThis, 'AudioContext', {
+    value: FakeAudioContext,
+    writable: true,
+    configurable: true,
+  });
+}
+
+const originalFetch = (globalThis as { fetch?: typeof fetch }).fetch;
+Object.defineProperty(globalThis, 'fetch', {
+  configurable: true,
+  writable: true,
+  value: ((input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === 'string' ? input : String(input);
+    if (url.includes('/sounds/')) {
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as unknown as Response);
+    }
+    if (originalFetch) return originalFetch(input);
+    return Promise.reject(new Error(`unstubbed fetch: ${url}`));
+  }) as typeof fetch,
+});

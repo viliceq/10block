@@ -32,29 +32,86 @@ const HAPTICS: Record<EventKey, number | number[]> = {
   gameover: [80, 60, 80],
 };
 
-export function createAudio(): AudioApi {
-  const elements: Record<EventKey, HTMLAudioElement> = {
-    pickup: load('pickup'),
-    place: load('place'),
-    reject: load('reject'),
-    clear: load('clear'),
-    combo: load('combo'),
-    perfect: load('perfect'),
-    gameover: load('gameover'),
-  };
+const EVENT_KEYS: ReadonlyArray<EventKey> = [
+  'pickup',
+  'place',
+  'reject',
+  'clear',
+  'combo',
+  'perfect',
+  'gameover',
+];
 
+function getAudioContextCtor(): typeof AudioContext | null {
+  if (typeof AudioContext !== 'undefined') return AudioContext;
+  const w = window as unknown as { webkitAudioContext?: typeof AudioContext };
+  return typeof w.webkitAudioContext === 'function'
+    ? w.webkitAudioContext
+    : null;
+}
+
+export function createAudio(): AudioApi {
   let muted = loadMute();
+  const setMuted = (value: boolean): void => {
+    muted = value;
+    saveMute(value);
+  };
+  const isMuted = (): boolean => muted;
+
+  const Ctor = getAudioContextCtor();
+  if (!Ctor) {
+    // No Web Audio (ancient browser / SSR): degrade to haptics only.
+    return build(
+      (name) => {
+        if (!muted) vibrate(HAPTICS[name]);
+      },
+      () => {},
+      setMuted,
+      isMuted,
+    );
+  }
+
+  const ctx = new Ctor();
+  const buffers = new Map<EventKey, AudioBuffer>();
+
+  for (const name of EVENT_KEYS) {
+    fetch(`/sounds/${name}.mp3`)
+      .then((r) => r.arrayBuffer())
+      .then((data) => ctx.decodeAudioData(data))
+      .then((decoded) => {
+        buffers.set(name, decoded);
+      })
+      .catch(() => {
+        // Clip unavailable — that event is silent (haptics still fire).
+      });
+  }
+
+  function resumeIfSuspended(): void {
+    if (ctx.state === 'suspended') void ctx.resume();
+  }
 
   function fire(name: EventKey): void {
     if (muted) return;
-    const el = elements[name];
-    el.currentTime = 0;
-    el.play().catch(() => {
-      // autoplay blocked or pre-unlock — caller is expected to invoke unlock().
-    });
+    resumeIfSuspended();
+    const buffer = buffers.get(name);
+    if (buffer) {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    }
     vibrate(HAPTICS[name]);
   }
 
+  return build(fire, resumeIfSuspended, setMuted, isMuted);
+}
+
+function build(
+  fire: (name: EventKey) => void,
+  unlock: () => void,
+  setMuted: (value: boolean) => void,
+  isMuted: () => boolean,
+): AudioApi {
   return {
     pickup: () => fire('pickup'),
     place: () => fire('place'),
@@ -63,18 +120,9 @@ export function createAudio(): AudioApi {
     combo: () => fire('combo'),
     perfect: () => fire('perfect'),
     gameOver: () => fire('gameover'),
-    setMuted(value: boolean): void {
-      muted = value;
-      saveMute(value);
-    },
-    isMuted: () => muted,
-    unlock(): void {
-      for (const el of Object.values(elements)) {
-        el.play().catch(() => {});
-        el.pause();
-        el.currentTime = 0;
-      }
-    },
+    setMuted,
+    isMuted,
+    unlock,
   };
 }
 
@@ -94,12 +142,6 @@ export function createSilentAudio(): AudioApi {
     isMuted: () => muted,
     unlock: noop,
   };
-}
-
-function load(name: EventKey): HTMLAudioElement {
-  const el = new Audio(`/sounds/${name}.mp3`);
-  el.preload = 'auto';
-  return el;
 }
 
 function vibrate(pattern: number | number[]): void {

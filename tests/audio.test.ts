@@ -1,18 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createAudio, createSilentAudio, type AudioApi } from '../src/audio';
 
-let playSpy: ReturnType<typeof vi.spyOn>;
-let pauseSpy: ReturnType<typeof vi.spyOn>;
 let vibrateSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  playSpy = vi
-    .spyOn(HTMLAudioElement.prototype, 'play')
-    .mockResolvedValue(undefined);
-  pauseSpy = vi
-    .spyOn(HTMLAudioElement.prototype, 'pause')
-    .mockImplementation(() => {});
-
+  vi.restoreAllMocks();
   vibrateSpy = vi.fn(() => true);
   Object.defineProperty(navigator, 'vibrate', {
     value: vibrateSpy,
@@ -21,31 +13,38 @@ beforeEach(() => {
   });
 });
 
+/** Let the fetch → arrayBuffer → decodeAudioData chains settle so the audio
+ *  module's buffers populate. The setup.ts stubs all resolve immediately, so
+ *  a handful of microtask turns plus one macrotask is deterministic. */
+async function flushBufferLoad(): Promise<void> {
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  await new Promise((r) => setTimeout(r));
+}
+
+function sourceStartSpy(): ReturnType<typeof vi.spyOn> {
+  const proto = Object.getPrototypeOf(new AudioContext().createBufferSource());
+  return vi.spyOn(proto, 'start');
+}
+
+const EVENT_METHODS: Array<keyof AudioApi> = [
+  'pickup',
+  'place',
+  'reject',
+  'clear',
+  'combo',
+  'perfect',
+  'gameOver',
+];
+
 describe('createSilentAudio()', () => {
-  it('provides no-op event methods that do not throw', () => {
+  it('event methods do not throw', () => {
     const audio = createSilentAudio();
-    for (const fn of [
-      audio.pickup,
-      audio.place,
-      audio.reject,
-      audio.clear,
-      audio.combo,
-      audio.perfect,
-      audio.gameOver,
-    ]) {
-      expect(fn).not.toThrow();
+    for (const m of EVENT_METHODS) {
+      expect(audio[m] as () => void).not.toThrow();
     }
   });
 
-  it('does not invoke HTMLAudioElement.play', () => {
-    const audio = createSilentAudio();
-    audio.pickup();
-    audio.place();
-    audio.gameOver();
-    expect(playSpy).not.toHaveBeenCalled();
-  });
-
-  it('does not invoke navigator.vibrate', () => {
+  it('does not vibrate', () => {
     const audio = createSilentAudio();
     audio.pickup();
     audio.clear();
@@ -61,59 +60,34 @@ describe('createSilentAudio()', () => {
 });
 
 describe('createAudio() — playback', () => {
-  const eventNames: Array<keyof AudioApi> = [
-    'pickup',
-    'place',
-    'reject',
-    'clear',
-    'combo',
-    'perfect',
-    'gameOver',
-  ];
-
-  it('plays a sound for every event method when not muted', () => {
+  it('starts a buffer source for every event once buffers are loaded', async () => {
+    const startSpy = sourceStartSpy();
     const audio = createAudio();
-    for (const name of eventNames) {
-      playSpy.mockClear();
-      (audio[name] as () => void)();
-      expect(playSpy, `${String(name)} should play`).toHaveBeenCalledTimes(1);
+    await flushBufferLoad();
+    for (const m of EVENT_METHODS) {
+      startSpy.mockClear();
+      (audio[m] as () => void)();
+      expect(startSpy, `${String(m)} should start a source`).toHaveBeenCalledTimes(1);
     }
   });
 
-  it('uses a distinct audio element per event', () => {
+  it('does not start a source before buffers finish loading', () => {
+    const startSpy = sourceStartSpy();
     const audio = createAudio();
-    for (const name of eventNames) (audio[name] as () => void)();
-    const distinct = new Set(playSpy.mock.instances);
-    expect(distinct.size).toBe(eventNames.length);
-  });
-
-  it('rewinds the element to 0 before playing', () => {
-    const audio = createAudio();
-    // Manually move time forward on every element via the prototype getter trick:
-    // we cannot easily inspect each element, but a setter spy on currentTime
-    // confirms each play resets it.
-    const setSpy = vi.fn();
-    Object.defineProperty(HTMLMediaElement.prototype, 'currentTime', {
-      set: setSpy,
-      get() {
-        return 0;
-      },
-      configurable: true,
-    });
-    audio.clear();
-    audio.combo();
-    expect(setSpy).toHaveBeenCalledWith(0);
+    audio.pickup(); // buffers still in flight
+    expect(startSpy).not.toHaveBeenCalled();
   });
 });
 
 describe('createAudio() — mute', () => {
-  it('skips playback when muted', () => {
+  it('creates no source when muted', async () => {
+    const startSpy = sourceStartSpy();
     const audio = createAudio();
+    await flushBufferLoad();
     audio.setMuted(true);
     audio.pickup();
-    audio.place();
     audio.gameOver();
-    expect(playSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
   });
 
   it('skips vibration when muted', () => {
@@ -133,24 +107,28 @@ describe('createAudio() — mute', () => {
 
   it('initialises mute from storage', () => {
     localStorage.setItem('blockly:mute', 'true');
-    const audio = createAudio();
-    expect(audio.isMuted()).toBe(true);
+    expect(createAudio().isMuted()).toBe(true);
   });
 });
 
-describe('createAudio() — unlock', () => {
-  it('plays and pauses every element', () => {
+describe('createAudio() — context resume', () => {
+  it('unlock() resumes a suspended context', () => {
+    const resumeSpy = vi.spyOn(AudioContext.prototype, 'resume');
     const audio = createAudio();
     audio.unlock();
-    expect(playSpy.mock.calls.length).toBeGreaterThanOrEqual(7);
-    expect(pauseSpy.mock.calls.length).toBeGreaterThanOrEqual(7);
+    expect(resumeSpy).toHaveBeenCalled();
+  });
+
+  it('an event resumes a suspended context (self-heal)', () => {
+    const resumeSpy = vi.spyOn(AudioContext.prototype, 'resume');
+    const audio = createAudio();
+    audio.pickup();
+    expect(resumeSpy).toHaveBeenCalled();
   });
 });
 
 describe('createAudio() — haptics', () => {
-  it('invokes navigator.vibrate on every event when not muted', () => {
-    // navigator.vibrate is typed as Iterable<number>; the audio module wraps
-    // single-number patterns into an array so types and runtime agree.
+  it('invokes navigator.vibrate per event when not muted', () => {
     const audio = createAudio();
     audio.pickup();
     expect(vibrateSpy).toHaveBeenLastCalledWith([10]);
