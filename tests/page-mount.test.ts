@@ -82,4 +82,21 @@ describe('main.ts entry point', () => {
     expect(callout).not.toBeNull();
     expect(callout?.dataset['visible']).toBe('false');
   });
+
+  it('mounts a visible start gate', () => {
+    const app = document.getElementById('app');
+    const gate = app?.querySelector<HTMLElement>('.start-gate');
+    expect(gate).not.toBeNull();
+    expect(gate?.dataset['visible']).toBe('true');
+  });
+
+  it('hides the start gate when its button is clicked', () => {
+    const app = document.getElementById('app');
+    const btn = app?.querySelector<HTMLButtonElement>('.start-gate__button');
+    expect(btn).not.toBeNull();
+    btn?.click();
+    expect(
+      app?.querySelector<HTMLElement>('.start-gate')?.dataset['visible'],
+    ).toBe('false');
+  });
 });

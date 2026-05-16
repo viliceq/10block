@@ -1,0 +1,25 @@
+.start-gate {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-start-gate);
+  display: grid;
+  place-items: center;
+  background: var(--color-overlay-backdrop);
+  color: var(--color-text);
+}
+
+.start-gate[data-visible='false'] {
+  display: none;
+}
+
+.start-gate__button {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: var(--screen-pad) calc(var(--screen-pad) * 2);
+  background: var(--color-piece-line);
+  color: var(--color-bg);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}

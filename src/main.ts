@@ -5,9 +5,11 @@ import './styles/drag.css';
 import './styles/hud.css';
 import './styles/overlay.css';
 import './styles/combo.css';
+import './styles/start-gate.css';
 import { createGame } from './game';
 import { createDrag } from './drag';
 import { createAudio } from './audio';
+import { createStartGate } from './start-gate';
 
 const app = document.getElementById('app');
 if (app) {
@@ -20,6 +22,11 @@ if (app) {
   if (trayEl && boardEl) {
     createDrag(game, trayEl, boardEl, audio);
   }
+
+  // The gate is the first thing the player touches; its real <button> click
+  // is the activation iOS needs to unlock Web Audio. Mounted last so it
+  // stacks above the board/tray/overlay until dismissed.
+  app.appendChild(createStartGate(() => audio.unlock()));
 
   // iOS requires a user gesture before audio can play. unlock() is
   // idempotent (no-op once the context is running), so bind it to several

@@ -76,6 +76,14 @@ describe('tokens.css — layout tokens', () => {
     expect(tokens).toMatch(/--z-overlay\s*:/);
   });
 
+  it('declares --z-start-gate above --z-ghost', () => {
+    const sg = tokens.match(/--z-start-gate\s*:\s*(\d+)/i);
+    const gh = tokens.match(/--z-ghost\s*:\s*(\d+)/i);
+    expect(sg).not.toBeNull();
+    expect(gh).not.toBeNull();
+    expect(Number(sg?.[1])).toBeGreaterThan(Number(gh?.[1]));
+  });
+
   describe('iPhone-portrait media query (SPEC §8.3)', () => {
     function mediaBlock(css: string): string {
       const match = css.match(/@media\s*\(\s*max-width:\s*430px\s*\)\s*\{([\s\S]*?)\}\s*$/m);

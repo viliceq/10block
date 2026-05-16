@@ -39,6 +39,9 @@
   /* overlay layer */
   --z-overlay: 900;
   --color-overlay-backdrop: rgba(15, 23, 42, 0.85);
+
+  /* start gate — must sit above everything at first paint */
+  --z-start-gate: 1100;
 }
 
 /* SPEC §8.3 — iPhone-portrait override.
