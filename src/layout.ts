@@ -15,9 +15,12 @@ export type LayoutInput = {
   readonly gap: number;
   /** Minimum legible / touch-comfortable cell size. */
   readonly minCell: number;
-  /** HUD extent along the stacking axis (height in portrait; min panel
-   *  width contribution in landscape). Measured by the binder. */
-  readonly hudExtent: number;
+  /** HUD width — consulted only in landscape (its side-panel width
+   *  contribution). Measured by the binder. */
+  readonly hudWidth: number;
+  /** HUD height — consulted only in portrait (it stacks above the board).
+   *  Measured by the binder. */
+  readonly hudHeight: number;
   /** `trayCellSize = floor(cellSize * trayScale)`; 0 < trayScale ≤ 1. */
   readonly trayScale: number;
 };
@@ -45,7 +48,8 @@ export function computeLayout(input: LayoutInput): Layout {
     boardPad,
     gap,
     minCell,
-    hudExtent,
+    hudWidth,
+    hudHeight,
     trayScale,
   } = input;
 
@@ -78,9 +82,9 @@ export function computeLayout(input: LayoutInput): Layout {
   // fit, the page scrolls as a last resort — the board never clips (§8.9).
   let auxFits: boolean;
   if (orientation === 'portrait') {
-    auxFits = hudExtent + boardSize + traySlotSize <= contentH;
+    auxFits = hudHeight + boardSize + traySlotSize <= contentH;
   } else {
-    const panelWidth = Math.max(hudExtent, traySlotSize);
+    const panelWidth = Math.max(hudWidth, traySlotSize);
     auxFits = boardSize + panelWidth <= contentW;
   }
 

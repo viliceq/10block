@@ -1,12 +1,17 @@
 :root {
-  /* layout */
-  --cell-size: 64px;
-  --cell-gap: 4px;
-  --board-pad: 12px;
-  --screen-pad: 24px;
+  /* layout — static spacing tokens (orientation-independent) */
+  --cell-gap: 2px;
+  --board-pad: 6px;
+  --screen-pad: 12px;
   --radius: 6px;
+  --min-cell: 28px;
+  --tray-scale: 0.5;
 
-  /* tray sizing — pieces are drawn at a smaller scale than the board */
+  /* Runtime-derived by the viewport binder (src/viewport.ts), written onto
+   * :root before first paint. The values here are first-paint fallbacks only
+   * (SPEC §8.3). --cell-size stays 64 to match CELL_SIZE_FALLBACK in drag.ts. */
+  --cell-size: 64px;
+  --board-size: 670px;
   --tray-cell-size: 28px;
   --tray-slot-size: 168px;
 
@@ -42,21 +47,4 @@
 
   /* start gate — must sit above everything at first paint */
   --z-start-gate: 1100;
-}
-
-/* SPEC §8.3 — iPhone-portrait override.
- * 430px covers every current iPhone in portrait (Pro Max is the widest).
- * Landscape iPhones have width ≥ 667px, so the portrait constraint is implicit.
- * Sizing math: board = 10×32 + 9×2 + 2×6 = 350; app padding 12px × 2 = 24;
- * total layout = 374px. Fits iPhone SE 2nd-gen (375px) and every newer
- * iPhone in portrait. */
-@media (max-width: 430px) {
-  :root {
-    --cell-size: 32px;
-    --cell-gap: 2px;
-    --board-pad: 6px;
-    --screen-pad: 12px;
-    --tray-cell-size: 20px;
-    --tray-slot-size: 112px;
-  }
 }

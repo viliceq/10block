@@ -5,7 +5,6 @@
   padding: var(--board-pad);
   background: var(--color-board);
   border-radius: var(--radius);
-  margin-top: var(--screen-pad);
 }
 
 .tray__slot {

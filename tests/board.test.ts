@@ -259,3 +259,46 @@ describe('board.css — safe area (SPEC §8.9)', () => {
     expect(css).not.toMatch(/#app\s*\{[^}]*padding:\s*var\(--screen-pad\)\s*;/);
   });
 });
+
+describe('board.css — orientation grid shell (SPEC §8.7)', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let css = '';
+  let trayCss = '';
+
+  beforeAll(() => {
+    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+    trayCss = readFileSync(resolve(here, '../src/styles/tray.css'), 'utf-8');
+  });
+
+  it('makes #app a grid', () => {
+    expect(css).toMatch(/#app\s*\{[^}]*display:\s*grid/);
+  });
+
+  it('assigns each region to a named grid area', () => {
+    expect(css).toMatch(/\.hud\s*\{[^}]*grid-area:\s*hud/);
+    expect(css).toMatch(/\.board\s*\{[^}]*grid-area:\s*board/);
+    expect(css).toMatch(/\.tray\s*\{[^}]*grid-area:\s*tray/);
+  });
+
+  it('portrait stacks hud / board / tray vertically', () => {
+    expect(css).toMatch(
+      /#app\[data-orientation=['"]portrait['"]\][^{]*\{[^}]*grid-template-areas:\s*['"]hud['"]\s*['"]board['"]\s*['"]tray['"]/,
+    );
+  });
+
+  it('landscape hugs the board left across two rows with hud over tray', () => {
+    expect(css).toMatch(
+      /#app\[data-orientation=['"]landscape['"]\][^{]*\{[^}]*grid-template-areas:\s*['"]board hud['"]\s*['"]board tray['"]/,
+    );
+  });
+
+  it('landscape collapses the tray to a single column (side-panel stack)', () => {
+    expect(css).toMatch(
+      /#app\[data-orientation=['"]landscape['"]\]\s+\.tray[^{]*\{[^}]*grid-template-columns:\s*(1fr|repeat\(1,)/,
+    );
+  });
+
+  it('tray spacing comes from the grid gap, not a margin-top', () => {
+    expect(trayCss).not.toMatch(/\.tray\s*\{[^}]*margin-top/);
+  });
+});

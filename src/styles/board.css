@@ -30,13 +30,47 @@ body {
 }
 
 #app {
+  display: grid;
+  gap: var(--screen-pad);
+  place-items: center;
+  box-sizing: border-box;
   padding-top: max(var(--screen-pad), env(safe-area-inset-top));
   padding-right: max(var(--screen-pad), env(safe-area-inset-right));
   padding-bottom: max(var(--screen-pad), env(safe-area-inset-bottom));
   padding-left: max(var(--screen-pad), env(safe-area-inset-left));
 }
 
+/* Aspect-switched layout (SPEC §8.7). The binder sets data-orientation; the
+ * in-flow children are exactly .hud/.board/.tray (overlay + combo are fixed). */
+#app[data-orientation='portrait'] {
+  grid-template-areas: 'hud' 'board' 'tray';
+  grid-template-columns: min-content;
+}
+
+#app[data-orientation='landscape'] {
+  grid-template-areas: 'board hud' 'board tray';
+  grid-template-columns: min-content min-content;
+  grid-template-rows: min-content min-content;
+  align-items: center;
+}
+
+.hud {
+  grid-area: hud;
+}
+
+.tray {
+  grid-area: tray;
+}
+
+/* In landscape the tray is a vertical 3-slot stack in the side panel, so its
+ * width stays ≈ one --tray-slot-size (matching computeLayout's panel model). */
+#app[data-orientation='landscape'] .tray {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, auto);
+}
+
 .board {
+  grid-area: board;
   display: grid;
   grid-template-columns: repeat(10, var(--cell-size));
   grid-template-rows: repeat(10, var(--cell-size));

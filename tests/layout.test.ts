@@ -12,7 +12,8 @@ function input(p: Partial<LayoutInput> & {
     insetRight: 0,
     insetBottom: 0,
     insetLeft: 0,
-    hudExtent: 60,
+    hudWidth: 60,
+    hudHeight: 60,
     ...TOKENS,
     ...p,
   };
@@ -210,12 +211,40 @@ describe('computeLayout — §8.9 board-vs-budget invariant', () => {
   });
 });
 
+describe('computeLayout — HUD axis is orientation-specific', () => {
+  it('portrait consults hudHeight, not hudWidth', () => {
+    // 400×1000 portrait: a tall HUD eats the vertical budget → overflow;
+    // an enormous hudWidth is irrelevant in portrait.
+    const tooTall = computeLayout(
+      input({ viewportWidth: 400, viewportHeight: 1000, hudHeight: 600, hudWidth: 10 }),
+    );
+    const wideOk = computeLayout(
+      input({ viewportWidth: 400, viewportHeight: 1000, hudHeight: 10, hudWidth: 5000 }),
+    );
+    expect(tooTall.orientation).toBe('portrait');
+    expect(tooTall.overflow).toBe(true);
+    expect(wideOk.overflow).toBe(false);
+  });
+
+  it('landscape consults hudWidth, not hudHeight', () => {
+    const tooWide = computeLayout(
+      input({ viewportWidth: 1000, viewportHeight: 400, hudWidth: 900, hudHeight: 10 }),
+    );
+    const tallOk = computeLayout(
+      input({ viewportWidth: 1000, viewportHeight: 400, hudWidth: 10, hudHeight: 5000 }),
+    );
+    expect(tooWide.orientation).toBe('landscape');
+    expect(tooWide.overflow).toBe(true);
+    expect(tallOk.overflow).toBe(false);
+  });
+});
+
 describe('computeLayout — overflow', () => {
   it('flags overflow when the auxiliary cannot fit the free dimension', () => {
     // Very short portrait: width is fine (big cell) but height can't hold
     // HUD + a full-width board + tray.
     const out = computeLayout(
-      input({ viewportWidth: 1200, viewportHeight: 300, hudExtent: 60 }),
+      input({ viewportWidth: 1200, viewportHeight: 300, hudWidth: 60, hudHeight: 60 }),
     );
     // 1200 wide, 300 tall → contentW(1176) > contentH(276) → landscape,
     // board sized from height; assert the model still returns sane integers.

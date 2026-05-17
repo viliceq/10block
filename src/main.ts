@@ -10,12 +10,23 @@ import { createGame } from './game';
 import { createDrag } from './drag';
 import { createAudio } from './audio';
 import { createStartGate } from './start-gate';
+import { createViewportBinder, createDomMeasure } from './viewport';
 
 const app = document.getElementById('app');
 if (app) {
   const audio = createAudio();
   const game = createGame({ audio });
   game.mount(app);
+
+  const hudEl = app.querySelector<HTMLElement>('.hud');
+  if (hudEl) {
+    const root = document.documentElement;
+    createViewportBinder({
+      appEl: app,
+      root,
+      measure: createDomMeasure({ appEl: app, hudEl, root }),
+    });
+  }
 
   const trayEl = app.querySelector<HTMLElement>('.tray');
   const boardEl = app.querySelector<HTMLElement>('.board');
