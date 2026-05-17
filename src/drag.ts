@@ -27,8 +27,10 @@ export const CELL_SIZE_FALLBACK = 64;
 
 /** How far above a touch point the dragged piece floats so the fingertip
  *  doesn't occlude the landing target. Behavioural constant, not a CSS token
- *  (it never appears in any stylesheet). */
-const TOUCH_LIFT_PX = 64;
+ *  (it never appears in any stylesheet). Kept small so the bottom row stays
+ *  reachable when the board fills the safe height in landscape (iteration 28):
+ *  a larger lift pushes the required finger position off the screen bottom. */
+const TOUCH_LIFT_PX = 32;
 
 function readCellSize(): number {
   const raw = getComputedStyle(document.documentElement).getPropertyValue('--cell-size');
@@ -97,7 +99,7 @@ export function createDrag(
     // Re-render canonical engine state so any prior preview is wiped.
     renderBoardState(boardEl, game.boardState);
 
-    const target = findBoardCell(x, y);
+    const target = findBoardCell(boardEl, x, y);
     if (!target) return;
 
     const piece = game.trayPieces[active.slotIndex];
@@ -129,7 +131,7 @@ export function createDrag(
     if (release.place) {
       const piece = game.trayPieces[slotIndex];
       if (piece) {
-        const cell = findBoardCell(release.x, release.y);
+        const cell = findBoardCell(boardEl, release.x, release.y);
         if (cell && canPlace(game.boardState, piece, cell.row, cell.col)) {
           game.place(slotIndex, cell.row, cell.col);
           placed = true; // game.place re-rendered; preview already gone.
@@ -207,7 +209,7 @@ function positionGhost(
   ghost.style.transform = `translate3d(${x - offset}px, ${y - offset - lift}px, 0)`;
 }
 
-function findBoardCell(x: number, y: number): { row: number; col: number } | null {
+function cellFromPoint(x: number, y: number): { row: number; col: number } | null {
   const elements = document.elementsFromPoint(x, y);
   for (const el of elements) {
     if (el instanceof HTMLElement && el.classList.contains('board__cell')) {
@@ -219,4 +221,54 @@ function findBoardCell(x: number, y: number): { row: number; col: number } | nul
     }
   }
   return null;
+}
+
+function cornerCell(boardEl: HTMLElement, row: number, col: number): DOMRect | null {
+  const el = boardEl.querySelector<HTMLElement>(
+    `.board__cell[data-row="${row}"][data-col="${col}"]`,
+  );
+  return el ? el.getBoundingClientRect() : null;
+}
+
+/**
+ * Resolve a screen point to a board cell. Primary: the element directly under
+ * the point. Fallback (iteration 28): when nothing is hit but the point is
+ * within the board's horizontal span and within one cell-pitch above/below the
+ * board, snap to the nearest cell — this keeps the bottom row reachable for
+ * flat pieces once the touch-lift is applied. Points further out (e.g. a
+ * release over the side-panel tray, or no layout at all in jsdom) return null,
+ * so release-to-cancel is preserved.
+ */
+function findBoardCell(
+  boardEl: HTMLElement,
+  x: number,
+  y: number,
+): { row: number; col: number } | null {
+  const direct = cellFromPoint(x, y);
+  if (direct) return direct;
+
+  const a = cornerCell(boardEl, 0, 0);
+  const b = cornerCell(boardEl, BOARD_SIZE - 1, BOARD_SIZE - 1);
+  if (!a || !b) return null;
+  const { left, top } = a;
+  const right = b.right;
+  const bottom = b.bottom;
+  const spanX = right - left;
+  const spanY = bottom - top;
+  if (spanX <= 0 || spanY <= 0) return null; // no layout (jsdom) — nothing to snap
+
+  const pitchY = spanY / BOARD_SIZE;
+  if (x < left || x > right) return null;
+  if (y < top - pitchY || y > bottom + pitchY) return null;
+
+  const clampedY = Math.min(Math.max(y, top), bottom - 0.001);
+  const col = Math.min(
+    BOARD_SIZE - 1,
+    Math.max(0, Math.floor(((x - left) / spanX) * BOARD_SIZE)),
+  );
+  const row = Math.min(
+    BOARD_SIZE - 1,
+    Math.max(0, Math.floor(((clampedY - top) / spanY) * BOARD_SIZE)),
+  );
+  return { row, col };
 }

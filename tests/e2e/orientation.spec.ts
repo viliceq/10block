@@ -41,5 +41,20 @@ for (const c of cases) {
     } else {
       expect(bb.y).toBeLessThan(tb.y);
     }
+
+    // Iteration 28: the bottom row must be droppable without the finger
+    // leaving the screen. Touch-drop hit-tests at finger − TOUCH_LIFT_PX (32),
+    // so the finger position needed to target the bottom row is
+    // bottomRowCenterY + 32 and must stay on-screen.
+    const TOUCH_LIFT_PX = 32;
+    const bottomCell = await page
+      .locator('.board__cell[data-row="9"][data-col="5"]')
+      .boundingBox();
+    expect(bottomCell).not.toBeNull();
+    if (bottomCell) {
+      const requiredFingerY =
+        bottomCell.y + bottomCell.height / 2 + TOUCH_LIFT_PX;
+      expect(requiredFingerY).toBeLessThanOrEqual(c.h);
+    }
   });
 }

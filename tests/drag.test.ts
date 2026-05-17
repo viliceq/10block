@@ -352,8 +352,8 @@ describe('createDrag — touch finger-lift', () => {
     pmove({ pointerType: 'touch', clientX: 120, clientY: 200 });
     const ghost = document.body.querySelector<HTMLElement>('.ghost');
     // jsdom getComputedStyle returns "" → CELL_SIZE_FALLBACK 64 → offset 32.
-    // TOUCH_LIFT_PX = 64. x: 120 - 32 = 88. y: 200 - 32 - 64 = 104.
-    expect(ghost?.style.transform).toContain('translate3d(88px, 104px, 0');
+    // TOUCH_LIFT_PX = 32. x: 120 - 32 = 88. y: 200 - 32 - 32 = 136.
+    expect(ghost?.style.transform).toContain('translate3d(88px, 136px, 0');
   });
 
   it('hit-tests at the lifted position on a touch drop', () => {
@@ -361,7 +361,7 @@ describe('createDrag — touch finger-lift', () => {
     const spy = vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
     pdown(slot(h, 0), { pointerType: 'touch' });
     pup({ pointerType: 'touch', clientX: 150, clientY: 220 });
-    expect(spy).toHaveBeenCalledWith(150, 220 - 64);
+    expect(spy).toHaveBeenCalledWith(150, 220 - 32);
   });
 
   it('does not lift for mouse pointers (iteration-10 behaviour preserved)', () => {
@@ -384,6 +384,87 @@ describe('createDrag — touch finger-lift', () => {
     for (const [r, c] of piece.cells) {
       expect(boardCell(h, 3 + r, 3 + c).dataset['state']).toBe('preview-ok');
     }
+  });
+});
+
+describe('createDrag — edge-snap fallback (bottom row reachable)', () => {
+  // Synthetic 30px-cell board at (0,0)–(300,300); other elements zero-size.
+  function stubBoardGeometry(): void {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement): DOMRect {
+        if (this.classList.contains('board__cell')) {
+          const r = Number(this.dataset['row']);
+          const c = Number(this.dataset['col']);
+          const x = c * 30;
+          const y = r * 30;
+          return {
+            x,
+            y,
+            left: x,
+            top: y,
+            right: x + 30,
+            bottom: y + 30,
+            width: 30,
+            height: 30,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
+        return {
+          x: 0,
+          y: 0,
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 0,
+          height: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      },
+    );
+  }
+
+  function row9HasPreview(h: Harness): boolean {
+    return (
+      h.boardEl.querySelectorAll(
+        '.board__cell[data-row="9"][data-state="preview-ok"],' +
+          '.board__cell[data-row="9"][data-state="preview-bad"]',
+      ).length > 0
+    );
+  }
+
+  it('snaps a point just below the bottom edge to the bottom row', () => {
+    const h = setup();
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]); // force fallback
+    stubBoardGeometry();
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    // lifted y = clientY - 32 = 305 → 5px below the board bottom (300),
+    // within one cell-pitch (30) and inside the board horizontally.
+    pmove({ pointerType: 'touch', clientX: 150, clientY: 305 + 32 });
+    expect(row9HasPreview(h)).toBe(true);
+  });
+
+  it('returns null for a point well past the bottom edge (cancel preserved)', () => {
+    const h = setup();
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    stubBoardGeometry();
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    pmove({ pointerType: 'touch', clientX: 150, clientY: 400 + 32 });
+    expect(row9HasPreview(h)).toBe(false);
+  });
+
+  it('returns null for a point outside the board horizontally', () => {
+    const h = setup();
+    vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    stubBoardGeometry();
+    pdown(slot(h, 0), { pointerType: 'touch' });
+    pmove({ pointerType: 'touch', clientX: 350, clientY: 290 + 32 });
+    expect(
+      h.boardEl.querySelectorAll(
+        '.board__cell[data-state="preview-ok"],' +
+          '.board__cell[data-state="preview-bad"]',
+      ).length,
+    ).toBe(0);
   });
 });
 
