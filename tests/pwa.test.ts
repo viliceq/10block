@@ -30,6 +30,10 @@ describe('PWA — index.html', () => {
   it('declares apple-mobile-web-app-capable so iOS launches full-screen', () => {
     expect(indexHtml).toMatch(/apple-mobile-web-app-capable/);
   });
+
+  it('uses viewport-fit=cover so env() safe-area insets resolve (SPEC §8.9)', () => {
+    expect(indexHtml).toMatch(/viewport-fit\s*=\s*cover/);
+  });
 });
 
 describe('PWA — vite.config.ts', () => {

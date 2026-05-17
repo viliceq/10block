@@ -1,9 +1,8 @@
 .combo-callout {
   position: fixed;
-  top: var(--screen-pad);
-  left: 50%;
+  top: max(var(--screen-pad), env(safe-area-inset-top));
+  left: calc(50% + (env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
   z-index: var(--z-overlay);
-  font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
   font-size: 40px;
   font-weight: 700;
   letter-spacing: 0.1em;

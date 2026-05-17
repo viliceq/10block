@@ -30,7 +30,10 @@ body {
 }
 
 #app {
-  padding: var(--screen-pad);
+  padding-top: max(var(--screen-pad), env(safe-area-inset-top));
+  padding-right: max(var(--screen-pad), env(safe-area-inset-right));
+  padding-bottom: max(var(--screen-pad), env(safe-area-inset-bottom));
+  padding-left: max(var(--screen-pad), env(safe-area-inset-left));
 }
 
 .board {

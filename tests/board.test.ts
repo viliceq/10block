@@ -236,3 +236,26 @@ describe('board.css — touch hygiene', () => {
     expect(css).toMatch(/\.board\b/);
   });
 });
+
+describe('board.css — safe area (SPEC §8.9)', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let css = '';
+
+  beforeAll(() => {
+    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+  });
+
+  for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+    it(`pads #app on the ${side} with max(--screen-pad, env(safe-area-inset-${side}))`, () => {
+      expect(css).toMatch(
+        new RegExp(
+          `padding-${side}:\\s*max\\(\\s*var\\(--screen-pad\\)\\s*,\\s*env\\(safe-area-inset-${side}\\)\\s*\\)`,
+        ),
+      );
+    });
+  }
+
+  it('no longer collapses #app padding to the raw --screen-pad token', () => {
+    expect(css).not.toMatch(/#app\s*\{[^}]*padding:\s*var\(--screen-pad\)\s*;/);
+  });
+});
