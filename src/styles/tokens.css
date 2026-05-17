@@ -47,4 +47,8 @@
 
   /* start gate — must sit above everything at first paint */
   --z-start-gate: 1100;
+
+  /* version badge — above the start gate so the build is identifiable
+   * even before the gate is dismissed */
+  --z-version: 1200;
 }

@@ -84,6 +84,14 @@ describe('tokens.css — layout tokens', () => {
     expect(Number(sg?.[1])).toBeGreaterThan(Number(gh?.[1]));
   });
 
+  it('declares --z-version above --z-start-gate (build always identifiable)', () => {
+    const ver = tokens.match(/--z-version\s*:\s*(\d+)/i);
+    const sg = tokens.match(/--z-start-gate\s*:\s*(\d+)/i);
+    expect(ver).not.toBeNull();
+    expect(sg).not.toBeNull();
+    expect(Number(ver?.[1])).toBeGreaterThan(Number(sg?.[1]));
+  });
+
   describe('JS-derived sizing, no width breakpoint (SPEC §8.3 / §8.9)', () => {
     it('has no max-width media query (sizing is aspect-driven, runtime)', () => {
       expect(tokens).not.toMatch(/@media\s*\(\s*max-width/i);
