@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { VERSION } from '../src/version';
+import { APP_VERSION } from '../src/version';
 
 describe('toolchain smoke', () => {
   it('runs vitest', () => {
@@ -7,7 +7,7 @@ describe('toolchain smoke', () => {
   });
 
   it('imports modules from src/', () => {
-    expect(VERSION).toBe('0.0.0');
+    expect(typeof APP_VERSION).toBe('string');
   });
 
   it('has a jsdom document', () => {

@@ -25,7 +25,8 @@ Each piece of work is one **iteration**, a small TDD slice. Loop:
 4. Dispatch the **`implementer`** subagent — minimal code to make tests pass.
 5. The `PostToolUse` hook in `.claude/settings.json` runs `npm run test:run` on every `src/**` or `tests/**` edit. Treat hook failures as the immediate next thing to fix.
 6. Dispatch the **`verifier`** subagent (fresh context) — full suite + typecheck + spec conformance review.
-7. Append outcome to the iteration log; commit.
+7. Bump `APP_VERSION` in `src/version.ts` to `v<this-iteration>` (or a `.N` patch for a fix with no iteration doc). A test pins it to the latest `docs/iterations` number, so a stale value fails the suite.
+8. Append outcome to the iteration log; commit.
 
 **Never skip tests.** A red suite blocks moving on.
 

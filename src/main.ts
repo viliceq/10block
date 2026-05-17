@@ -6,11 +6,13 @@ import './styles/hud.css';
 import './styles/overlay.css';
 import './styles/combo.css';
 import './styles/start-gate.css';
+import './styles/version.css';
 import { createGame } from './game';
 import { createDrag } from './drag';
 import { createAudio } from './audio';
 import { createStartGate } from './start-gate';
 import { createViewportBinder, createDomMeasure } from './viewport';
+import { createVersionBadge } from './version';
 
 const app = document.getElementById('app');
 if (app) {
@@ -38,6 +40,7 @@ if (app) {
   // is the activation iOS needs to unlock Web Audio. Mounted last so it
   // stacks above the board/tray/overlay until dismissed.
   app.appendChild(createStartGate(() => audio.unlock()));
+  app.appendChild(createVersionBadge());
 
   // iOS requires a user gesture before audio can play. unlock() is
   // idempotent (no-op once the context is running), so bind it to several

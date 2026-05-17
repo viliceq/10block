@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { CATALOG } from '../src/pieces';
+import { APP_VERSION } from '../src/version';
 
 describe('main.ts entry point', () => {
   beforeAll(async () => {
@@ -88,6 +89,13 @@ describe('main.ts entry point', () => {
     const gate = app?.querySelector<HTMLElement>('.start-gate');
     expect(gate).not.toBeNull();
     expect(gate?.dataset['visible']).toBe('true');
+  });
+
+  it('mounts a version badge showing the current version', () => {
+    const app = document.getElementById('app');
+    const badge = app?.querySelector<HTMLElement>('.version');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toBe(APP_VERSION);
   });
 
   it('hides the start gate when its button is clicked', () => {
