@@ -171,6 +171,7 @@ The game ends when **none of the three pieces currently in the tray can be legal
 - A **landing preview** is shown: the cells where the piece would land are highlighted (green if legal, red if illegal). This is not a "ghost piece"; it's a placement preview at the snapped grid position.
 - Releasing on a legal position commits the placement. Releasing on an illegal position or off-board cancels and animates the piece back to its tray slot.
 - **Implementation:** Pointer Events API (not Touch/Mouse Events). The dragged piece is an absolutely positioned ghost element following the pointer via `transform: translate3d(...)`. Hit-testing uses `document.elementsFromPoint(x, y)` against board cell elements — no manual rect math, no DPR computation.
+- **The touch offset must be bounded so every cell stays reachable.** A constant pixel lift that exceeds the gap between the board edge and the screen edge makes the outermost row/column impossible to target once the board fills the safe space (the bottom-row-line failure, §8.9). Two rules together guarantee reachability in every orientation without the finger leaving the screen: (1) the lift is small relative to a cell; (2) hit-testing **snaps to the nearest cell** when the resolved point lands within ~one cell-pitch *just outside* a board edge — but still returns "no target" further out, so release-over-tray still cancels.
 - No tap-to-place, no rotation gestures, no keyboard shortcuts in v1.
 
 ## 8. Visuals & Layout
@@ -272,7 +273,7 @@ One adaptive layout, switched by **aspect ratio / orientation** (never device wi
 
 ### 8.9 Safe area & responsive sizing (load-bearing layout principles)
 
-These exist because the original width-breakpoint + fixed-pixel model broke in two fundamental ways: (a) transient UI rendered under the camera / Dynamic Island in portrait; (b) landscape fell back to iPad pixel sizes on a short viewport, so the board overflowed and the tray dropped below the fold.
+These exist because the original model broke in four ways, each a reusable lesson: (a) transient UI rendered under the camera / Dynamic Island in portrait; (b) a width-breakpoint + fixed-pixel layout fell back to iPad pixel sizes on a short landscape viewport, so the board overflowed and the tray dropped below the fold; (c) a constant drag-lift made the bottom row unreachable once the board sat flush to the safe-area edge (§7); (d) an intrinsically-sized auxiliary element collapsed after an orientation round-trip because WebKit did not recompute its `min-content` track.
 
 **Safe area is mandatory.**
 
@@ -286,6 +287,8 @@ These exist because the original width-breakpoint + fixed-pixel model broke in t
 
 **Orientation is aspect-driven, not device-driven.** Layout branches on `orientation` (portrait/landscape), not on `max-width`. The same rules produce a correct layout on iPhone, iPad, and desktop at any window size — there are no device-class assumptions.
 
+**Runtime-toggled layout is driven by explicit values, never browser intrinsic sizing.** Any element whose arrangement changes on a state toggle (orientation here; by extension theme/density in other apps) is sized from the same JS-derived custom properties as the board — e.g. the portrait tray pins to `--board-size` — not from `min-content`/`max-content` intrinsic tracks. WebKit does not reliably recompute intrinsic track sizing across an `orientationchange`/attribute flip, so an intrinsically-sized auxiliary element silently collapses on the return trip. If a size matters across a state change, compute it and write it down; don't ask the layout engine to re-derive it.
+
 **Acceptance (must hold on iPhone & iPad, both orientations):** the entire board is visible without scrolling; the tray is reachable without scrolling; no HUD/board/tray/callout pixel sits under a safe-area inset; rotating the device re-fits within one frame with no sub-pixel seams.
 
 ## 9. Audio & Haptics
@@ -293,6 +296,7 @@ These exist because the original width-breakpoint + fixed-pixel model broke in t
 - **SFX events:** piece pickup, legal drop, illegal drop, line clear, combo, perfect clear, game over.
 - **Music:** none in v1. Optional ambient track in a later release.
 - **Mute toggle** persists across sessions.
+- **Web Audio is locked until a real user gesture.** iOS/WebKit unlocks the `AudioContext` only from a genuine activation of the right class — a `click`/`pointerup` on a real control, **not** a drag — and the unlock must be (re)attempted **per page load**. The app therefore ships an explicit "tap to play" gate whose button click performs the unlock; binding unlock to several gesture types idempotently is the safety net. Never assume audio works just because buffers are decoded.
 - **Haptics:** use the Web Vibration API where available (Android; not exposed on iOS Safari at the time of writing). On iOS, rely on subtle audio cues instead. The spec should not assume haptics work — it's best-effort.
 
 ## 10. Persistence
@@ -337,6 +341,29 @@ The game is shippable when **all** of the following hold:
 - **Piece distribution:** pure uniform random can produce frustrating tray combinations (three 3×3 squares). Do we want anti-frustration weighting in v1 (e.g. ensure at least one of the three pieces is small)? Default: no, revisit after first playtest.
 - **High score reset:** should there be a UI to clear the best score? Default: no; advanced users can clear site data.
 
+## 14. PWA delivery, updates & diagnosability
+
+Learned from the deploy/version-badge incident: a correct build the device never loads is indistinguishable from a broken build.
+
+- **A visible, build-tied version marker is mandatory.** A small on-screen identifier (here the `vN.M` badge, tied to the iteration number) is the cheapest possible answer to "is the new code even running?" — without it, every other debugging step is guesswork. It must out-stack *every* full-screen layer (start gate, game-over overlay) via an explicit top z-index token and be `pointer-events: none`, so it is readable in every state and never intercepts input.
+- **Know the service-worker update lifecycle.** `registerType: 'autoUpdate'` (Workbox `skipWaiting` + `clientsClaim`) still does **not** refresh an already-open client until a reload, and an **iOS standalone PWA only checks/activates a new service worker on a cold relaunch** — force-quit (sometimes twice), worst case remove and re-add to the home screen. Precaching means *everything* is cache-first, so a bad deploy is sticky; keep `cleanupOutdatedCaches` on.
+- **Write down the user-facing "how to get the new version" steps** next to the deploy instructions — it is not discoverable.
+- **Versioning scheme:** integer tracks the iteration (`docs/iterations/NNNN`); a `.N` patch covers a fix shipped without its own iteration doc, resetting when the next iteration lands. A test pins the integer to the latest iteration so it cannot silently drift.
+
+## 15. General principles for future PWA apps
+
+App-agnostic; each line is a failure already paid for. Treat as a pre-ship checklist.
+
+1. **Safe area is not optional.** `viewport-fit=cover` + `max(<token>, env(safe-area-inset-*))` on every content-bounding edge, all four sides, both orientations. No fixed/absolute element in the inset zone — position relative to the safe content box.
+2. **Branch layout on aspect/orientation, never device width.** Width breakpoints + fixed pixels collapse on the next form factor.
+3. **Derive responsive sizes in JS into integer-px CSS custom properties; CSS only consumes them.** Don't trust media-query pixel guesses, and don't trust browser intrinsic sizing (`min/max-content`) for anything that toggles at runtime — recompute and write the value down.
+4. **The primary content element has sizing priority and is never clipped.** Scrolling is a graceful last resort, not a layout strategy.
+5. **Bound every pointer/touch offset so screen-edge targets stay reachable**, and snap-to-nearest within a tolerance at edges.
+6. **Ship a visible, build-tied version marker from day one.** Know the SW update lifecycle and the iOS cold-relaunch requirement; document how a user forces an update.
+7. **Real-engine e2e (WebKit) is mandatory for layout, safe-area, touch, and intrinsic-sizing behaviour.** jsdom/unit tests cannot observe any of these — they are exactly where the expensive bugs live. Reproduce the bug in a real browser *before* fixing, keep the repro as a regression test.
+8. **Treat platform media as locked until proven otherwise.** Web Audio needs a real user-gesture unlock (a click, not a drag), re-attempted per page load, behind an explicit start gate; assume nothing auto-plays.
+9. **Prefer explicit, stateless CSS plus JS-written values over clever intrinsic/auto behaviour.** Anything stateful (orientation, theme) must fully reset by construction, not by hoping the engine re-derives it.
+
 ---
 
-*Spec version: v1, 2026-05-16 — §8 layout reworked: aspect-driven orientation, safe-area mandate, runtime-derived whole-pixel board sizing (supersedes the width-breakpoint model).*
+*Spec version: v1, 2026-05-17 — §8 layout reworked (aspect-driven orientation, safe-area mandate, runtime-derived whole-pixel board sizing). §7/§8.9 hardened with the bounded-touch-offset and explicit-vs-intrinsic-sizing lessons; §9 notes the Web Audio unlock requirement; §14 (PWA delivery & diagnosability) and §15 (general reusable principles) added from the session's bug learnings.*
