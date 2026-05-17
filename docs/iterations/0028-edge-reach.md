@@ -1,7 +1,7 @@
 # Iteration 28 — Bottom-row reachability for flat pieces
 
 **Date:** 2026-05-17.
-**Status:** In progress.
+**Status:** Complete.
 
 ## Bug
 
