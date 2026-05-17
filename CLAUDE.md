@@ -1,6 +1,6 @@
 # Blockly — Working notes for Claude
 
-A block-puzzle PWA for iPad Safari. See **`SPEC.md`** for the product spec and **`CONTEXT.md`** for the domain language. Always read both at the start of a new session.
+A block-puzzle PWA for iPad Safari. See **`SPEC.md`** for the product spec and **`CONTEXT.md`** for the domain language. Always read both at the start of a new session. Also consult **`docs/pwa-principles.md`** — the portable, hard-won PWA engineering checklist — before any layout, touch, sizing, audio, or delivery work.
 
 ## Commands
 

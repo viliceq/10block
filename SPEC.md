@@ -341,29 +341,14 @@ The game is shippable when **all** of the following hold:
 - **Piece distribution:** pure uniform random can produce frustrating tray combinations (three 3×3 squares). Do we want anti-frustration weighting in v1 (e.g. ensure at least one of the three pieces is small)? Default: no, revisit after first playtest.
 - **High score reset:** should there be a UI to clear the best score? Default: no; advanced users can clear site data.
 
-## 14. PWA delivery, updates & diagnosability
+## 14. Engineering principles (cross-reference)
 
-Learned from the deploy/version-badge incident: a correct build the device never loads is indistinguishable from a broken build.
+The general, reusable lessons from this build — safe area, aspect-driven layout, JS-derived vs. intrinsic sizing, bounded touch offsets, platform-media unlock, PWA delivery & service-worker update lifecycle, mandatory visible build marker, and real-engine e2e — live in a standalone, project-agnostic document so they can travel to future apps:
 
-- **A visible, build-tied version marker is mandatory.** A small on-screen identifier (here the `vN.M` badge, tied to the iteration number) is the cheapest possible answer to "is the new code even running?" — without it, every other debugging step is guesswork. It must out-stack *every* full-screen layer (start gate, game-over overlay) via an explicit top z-index token and be `pointer-events: none`, so it is readable in every state and never intercepts input.
-- **Know the service-worker update lifecycle.** `registerType: 'autoUpdate'` (Workbox `skipWaiting` + `clientsClaim`) still does **not** refresh an already-open client until a reload, and an **iOS standalone PWA only checks/activates a new service worker on a cold relaunch** — force-quit (sometimes twice), worst case remove and re-add to the home screen. Precaching means *everything* is cache-first, so a bad deploy is sticky; keep `cleanupOutdatedCaches` on.
-- **Write down the user-facing "how to get the new version" steps** next to the deploy instructions — it is not discoverable.
-- **Versioning scheme:** integer tracks the iteration (`docs/iterations/NNNN`); a `.N` patch covers a fix shipped without its own iteration doc, resetting when the next iteration lands. A test pins the integer to the latest iteration so it cannot silently drift.
+➡️ **[`docs/pwa-principles.md`](./docs/pwa-principles.md)** — portable PWA engineering checklist.
 
-## 15. General principles for future PWA apps
-
-App-agnostic; each line is a failure already paid for. Treat as a pre-ship checklist.
-
-1. **Safe area is not optional.** `viewport-fit=cover` + `max(<token>, env(safe-area-inset-*))` on every content-bounding edge, all four sides, both orientations. No fixed/absolute element in the inset zone — position relative to the safe content box.
-2. **Branch layout on aspect/orientation, never device width.** Width breakpoints + fixed pixels collapse on the next form factor.
-3. **Derive responsive sizes in JS into integer-px CSS custom properties; CSS only consumes them.** Don't trust media-query pixel guesses, and don't trust browser intrinsic sizing (`min/max-content`) for anything that toggles at runtime — recompute and write the value down.
-4. **The primary content element has sizing priority and is never clipped.** Scrolling is a graceful last resort, not a layout strategy.
-5. **Bound every pointer/touch offset so screen-edge targets stay reachable**, and snap-to-nearest within a tolerance at edges.
-6. **Ship a visible, build-tied version marker from day one.** Know the SW update lifecycle and the iOS cold-relaunch requirement; document how a user forces an update.
-7. **Real-engine e2e (WebKit) is mandatory for layout, safe-area, touch, and intrinsic-sizing behaviour.** jsdom/unit tests cannot observe any of these — they are exactly where the expensive bugs live. Reproduce the bug in a real browser *before* fixing, keep the repro as a regression test.
-8. **Treat platform media as locked until proven otherwise.** Web Audio needs a real user-gesture unlock (a click, not a drag), re-attempted per page load, behind an explicit start gate; assume nothing auto-plays.
-9. **Prefer explicit, stateless CSS plus JS-written values over clever intrinsic/auto behaviour.** Anything stateful (orientation, theme) must fully reset by construction, not by hoping the engine re-derives it.
+The in-place rules above (§7 bounded touch offset, §8.9 safe-area mandate & explicit-vs-intrinsic sizing, §9 Web Audio unlock) are the 10Block-specific expression of those principles; the standalone doc is the generalised form to copy into the next project.
 
 ---
 
-*Spec version: v1, 2026-05-17 — §8 layout reworked (aspect-driven orientation, safe-area mandate, runtime-derived whole-pixel board sizing). §7/§8.9 hardened with the bounded-touch-offset and explicit-vs-intrinsic-sizing lessons; §9 notes the Web Audio unlock requirement; §14 (PWA delivery & diagnosability) and §15 (general reusable principles) added from the session's bug learnings.*
+*Spec version: v1, 2026-05-17 — §8 layout reworked (aspect-driven orientation, safe-area mandate, runtime-derived whole-pixel board sizing). §7/§8.9 hardened with the bounded-touch-offset and explicit-vs-intrinsic-sizing lessons; §9 notes the Web Audio unlock requirement. The general reusable principles were extracted to `docs/pwa-principles.md` (linked from §14).*
