@@ -24,6 +24,10 @@ Make the deployed rules page discoverable: add a "Rules" link to the start gate,
 4. Styled as a subtle secondary link beneath the primary button (not competing with it).
 5. Full suite + typecheck green. `APP_VERSION` → `v31`.
 
+## Patches
+
+- **v31.1** — button and link were appended directly to the full-viewport `.start-gate` grid, creating two auto rows that `align-content` stretched to half-height each → "Tap to play" drifted up over the HUD and "Rules" sank near the bottom (user screenshot). Fix: wrap both in a single `.start-gate__inner` flex column so the gate centres them as one group with a `--screen-pad` gap. Regression test added (gate has exactly one `.start-gate__inner` child holding both); WebKit-verified (group centred, gap < 40px).
+
 ## Files
 
 - `src/start-gate.ts`, `src/styles/start-gate.css`

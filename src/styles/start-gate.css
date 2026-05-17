@@ -4,9 +4,15 @@
   z-index: var(--z-start-gate);
   display: grid;
   place-items: center;
-  gap: var(--screen-pad);
   background: var(--color-overlay-backdrop);
   color: var(--color-text);
+}
+
+.start-gate__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--screen-pad);
 }
 
 .start-gate[data-visible='false'] {

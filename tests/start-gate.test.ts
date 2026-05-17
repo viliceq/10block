@@ -44,6 +44,18 @@ describe('createStartGate()', () => {
     expect(link?.getAttribute('rel') ?? '').toContain('noopener');
   });
 
+  it('groups button + link in a single centred inner container', () => {
+    // Regression: appending both directly to the grid created two auto rows
+    // that align-content stretched apart (button up, link down). They must
+    // live in one .start-gate__inner so the gate centres them as a group.
+    const gate = createStartGate(() => {});
+    expect(gate.children.length).toBe(1);
+    const inner = gate.firstElementChild as HTMLElement;
+    expect(inner.classList.contains('start-gate__inner')).toBe(true);
+    expect(inner.querySelector('.start-gate__button')).not.toBeNull();
+    expect(inner.querySelector('.start-gate__rules')).not.toBeNull();
+  });
+
   it('clicking the Rules link neither starts nor hides the gate', () => {
     const onStart = vi.fn();
     const gate = createStartGate(onStart);

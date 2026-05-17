@@ -35,7 +35,15 @@ export function createStartGate(onStart: () => void): HTMLElement {
   rules.target = '_blank';
   rules.rel = 'noopener';
 
-  gate.appendChild(button);
-  gate.appendChild(rules);
+  // Single centred group: the gate centres one child; the inner column
+  // stacks button + link with a small gap. (Appending both directly to the
+  // grid made two auto rows that align-content stretched to half-height
+  // each — button drifted up, link down.)
+  const inner = document.createElement('div');
+  inner.className = 'start-gate__inner';
+  inner.appendChild(button);
+  inner.appendChild(rules);
+
+  gate.appendChild(inner);
   return gate;
 }
