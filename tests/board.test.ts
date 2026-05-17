@@ -301,4 +301,10 @@ describe('board.css — orientation grid shell (SPEC §8.7)', () => {
   it('tray spacing comes from the grid gap, not a margin-top', () => {
     expect(trayCss).not.toMatch(/\.tray\s*\{[^}]*margin-top/);
   });
+
+  it('portrait tray is pinned to the board width (not intrinsic min-content)', () => {
+    expect(css).toMatch(
+      /#app\[data-orientation=['"]portrait['"]\]\s+\.tray[^{]*\{[^}]*width:\s*var\(--board-size\)/,
+    );
+  });
 });

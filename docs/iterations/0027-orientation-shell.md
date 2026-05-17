@@ -70,6 +70,10 @@ After `game.mount`, create the binder (`appEl=app`, `hudEl=app.querySelector('.h
 
 **Scope addition (deliberate, not creep):** kept `tests/e2e/orientation.spec.ts` (4 WebKit cases: iPhone/iPad × portrait/landscape) as permanent regression coverage — it directly pins issue #2 (board fully visible, square, tray reachable, board-left-of-tray in landscape). CI does not run e2e (typecheck + vitest + build only), so no CI risk; runs locally via `npm run test:e2e`.
 
+## Patches
+
+- **v29.2** — portrait tray collapsed to the pieces' intrinsic width after a landscape→portrait round-trip (pieces jammed together, gaps gone). Cause: the tray's width came from the `#app` grid's `min-content` column with a centred (non-stretched) item, which WebKit fails to recompute on an orientation round-trip; even fresh it gave cramped, uneven ~11–20px gaps. Fix: `#app[data-orientation='portrait'] .tray { width: var(--board-size); box-sizing: border-box }` — an explicit length from the binder, so the tray always equals the board width (SPEC §8.7) with even, generous spacing, immune to intrinsic-size recalculation. Added `tests/e2e/tray-spacing.spec.ts` (WebKit round-trip regression) + a `board.css` CSS-content assertion.
+
 ## Verifier outcome
 
 Self-verified: 343 vitest pass / 0 fail (19 files), typecheck green, production build green, all 4 WebKit orientation e2e cases green (board within viewport on every device×orientation — the exact issue-#2 failure mode now provably fixed). SPEC §8.9 inset-clearance (no pixel under the notch) needs the real device — deferred to the user on iPhone + iPad, both orientations.

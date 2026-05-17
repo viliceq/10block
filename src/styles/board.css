@@ -62,6 +62,16 @@ body {
   grid-area: tray;
 }
 
+/* Portrait: the tray spans the board's width (SPEC §8.7) so its three 1fr
+ * slots are wide and the pieces are evenly, generously spaced. Pinned to the
+ * binder-derived --board-size as an explicit length — never the #app grid's
+ * intrinsic min-content, which WebKit fails to recompute on an
+ * orientation round-trip (the tray collapsed to the pieces' width). */
+#app[data-orientation='portrait'] .tray {
+  width: var(--board-size);
+  box-sizing: border-box;
+}
+
 /* In landscape the tray is a vertical 3-slot stack in the side panel, so its
  * width stays ≈ one --tray-slot-size (matching computeLayout's panel model). */
 #app[data-orientation='landscape'] .tray {
