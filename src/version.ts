@@ -4,7 +4,7 @@
  * iteration doc (e.g. `v28.1`), resetting the patch when the next iteration
  * lands. A test pins the integer to the latest iteration so it can't drift.
  */
-export const APP_VERSION = 'v30';
+export const APP_VERSION = 'v31';
 
 export function createVersionBadge(): HTMLElement {
   const el = document.createElement('div');

@@ -32,4 +32,24 @@ describe('createStartGate()', () => {
     btn?.click();
     expect(onStart).toHaveBeenCalledTimes(1);
   });
+
+  it('exposes a "Rules" link opening /rules.html in a new tab', () => {
+    const gate = createStartGate(() => {});
+    const link = gate.querySelector<HTMLAnchorElement>('.start-gate__rules');
+    expect(link).not.toBeNull();
+    expect(link?.tagName).toBe('A');
+    expect(link?.textContent).toBe('Rules');
+    expect(link?.getAttribute('href')).toBe('/rules.html');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel') ?? '').toContain('noopener');
+  });
+
+  it('clicking the Rules link neither starts nor hides the gate', () => {
+    const onStart = vi.fn();
+    const gate = createStartGate(onStart);
+    const link = gate.querySelector<HTMLAnchorElement>('.start-gate__rules');
+    link?.click();
+    expect(onStart).not.toHaveBeenCalled();
+    expect(gate.dataset['visible']).toBe('true');
+  });
 });

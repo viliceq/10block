@@ -25,6 +25,17 @@ export function createStartGate(onStart: () => void): HTMLElement {
     gate.dataset['visible'] = 'false';
   });
 
+  // Separate <a>, not wired to onStart: tapping Rules must neither unlock
+  // audio nor dismiss the gate. Opens in a new tab so the game page (and
+  // its service-worker/audio state) survives.
+  const rules = document.createElement('a');
+  rules.className = 'start-gate__rules';
+  rules.textContent = 'Rules';
+  rules.href = '/rules.html';
+  rules.target = '_blank';
+  rules.rel = 'noopener';
+
   gate.appendChild(button);
+  gate.appendChild(rules);
   return gate;
 }
