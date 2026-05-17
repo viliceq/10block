@@ -47,6 +47,6 @@ describe('samplePiece(rng)', () => {
     const rng = mulberry32(7);
     for (let i = 0; i < 100; i++) samplePiece(rng);
     expect(CATALOG.map((p) => p.id)).toEqual(beforeIds);
-    expect(CATALOG.length).toBe(19);
+    expect(CATALOG.length).toBe(37);
   });
 });

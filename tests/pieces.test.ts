@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CATALOG,
+  PIECE_FAMILIES,
   findPieceById,
   type Piece,
   type PieceFamily,
@@ -26,6 +27,24 @@ const expectedIds = [
   'l3-se',
   'l3-sw',
   'l3-nw',
+  'tetro-t-up',
+  'tetro-t-right',
+  'tetro-t-down',
+  'tetro-t-left',
+  'tetro-l-0',
+  'tetro-l-90',
+  'tetro-l-180',
+  'tetro-l-270',
+  'tetro-j-0',
+  'tetro-j-90',
+  'tetro-j-180',
+  'tetro-j-270',
+  'tetro-s-0',
+  'tetro-s-90',
+  'tetro-z-0',
+  'tetro-z-90',
+  'rect-23-h',
+  'rect-23-v',
 ] as const;
 
 const validFamilies: ReadonlyArray<PieceFamily> = [
@@ -35,6 +54,12 @@ const validFamilies: ReadonlyArray<PieceFamily> = [
   'sq3',
   'l2',
   'l3',
+  'tetro-t',
+  'tetro-l',
+  'tetro-j',
+  'tetro-s',
+  'tetro-z',
+  'rect-23',
 ];
 
 function pieceById(id: string): Piece {
@@ -48,8 +73,8 @@ function cellsAsSet(cells: ReadonlyArray<readonly [number, number]>): Set<string
 }
 
 describe('CATALOG', () => {
-  it('contains exactly 19 pieces', () => {
-    expect(CATALOG.length).toBe(19);
+  it('contains exactly 37 pieces', () => {
+    expect(CATALOG.length).toBe(37);
   });
 
   it('contains every expected piece id once', () => {
@@ -66,6 +91,13 @@ describe('CATALOG', () => {
     for (const piece of CATALOG) {
       expect(validFamilies).toContain(piece.family);
     }
+  });
+
+  it('PIECE_FAMILIES is exactly the set of families in CATALOG (single source of truth)', () => {
+    const fromCatalog = new Set(CATALOG.map((p) => p.family));
+    expect(new Set(PIECE_FAMILIES)).toEqual(fromCatalog);
+    expect(PIECE_FAMILIES.length).toBe(fromCatalog.size);
+    expect([...PIECE_FAMILIES].sort()).toEqual([...validFamilies].sort());
   });
 
   it('keeps every cell within its bounding box', () => {
@@ -109,6 +141,24 @@ describe('CATALOG — family + size invariants', () => {
     { id: 'l3-se',     family: 'l3',     cells: 5, bbox: [3, 3] },
     { id: 'l3-sw',     family: 'l3',     cells: 5, bbox: [3, 3] },
     { id: 'l3-nw',     family: 'l3',     cells: 5, bbox: [3, 3] },
+    { id: 'tetro-t-up',    family: 'tetro-t', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-t-right', family: 'tetro-t', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-t-down',  family: 'tetro-t', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-t-left',  family: 'tetro-t', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-l-0',     family: 'tetro-l', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-l-90',    family: 'tetro-l', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-l-180',   family: 'tetro-l', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-l-270',   family: 'tetro-l', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-j-0',     family: 'tetro-j', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-j-90',    family: 'tetro-j', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-j-180',   family: 'tetro-j', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-j-270',   family: 'tetro-j', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-s-0',     family: 'tetro-s', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-s-90',    family: 'tetro-s', cells: 4, bbox: [2, 3] },
+    { id: 'tetro-z-0',     family: 'tetro-z', cells: 4, bbox: [3, 2] },
+    { id: 'tetro-z-90',    family: 'tetro-z', cells: 4, bbox: [2, 3] },
+    { id: 'rect-23-h',     family: 'rect-23', cells: 6, bbox: [3, 2] },
+    { id: 'rect-23-v',     family: 'rect-23', cells: 6, bbox: [2, 3] },
   ];
 
   for (const { id, family, cells, bbox } of cases) {
@@ -152,4 +202,58 @@ describe('CATALOG — L-shape cell fixtures', () => {
       expect(cellsAsSet(piece.cells)).toEqual(cellsAsSet(expected));
     });
   }
+});
+
+describe('CATALOG — Tetris/Block-Blast cell fixtures (iteration 30)', () => {
+  const fixtures: Record<string, ReadonlyArray<readonly [number, number]>> = {
+    'tetro-t-up':    [[0, 1], [1, 0], [1, 1], [1, 2]],
+    'tetro-t-right': [[0, 0], [1, 0], [2, 0], [1, 1]],
+    'tetro-t-down':  [[0, 0], [0, 1], [0, 2], [1, 1]],
+    'tetro-t-left':  [[0, 1], [1, 1], [2, 1], [1, 0]],
+    'tetro-l-0':     [[0, 0], [1, 0], [2, 0], [2, 1]],
+    'tetro-l-90':    [[0, 0], [0, 1], [0, 2], [1, 0]],
+    'tetro-l-180':   [[0, 0], [0, 1], [1, 1], [2, 1]],
+    'tetro-l-270':   [[0, 2], [1, 0], [1, 1], [1, 2]],
+    'tetro-j-0':     [[0, 1], [1, 1], [2, 1], [2, 0]],
+    'tetro-j-90':    [[0, 0], [1, 0], [1, 1], [1, 2]],
+    'tetro-j-180':   [[0, 0], [0, 1], [1, 0], [2, 0]],
+    'tetro-j-270':   [[0, 0], [0, 1], [0, 2], [1, 2]],
+    'tetro-s-0':     [[0, 1], [0, 2], [1, 0], [1, 1]],
+    'tetro-s-90':    [[0, 0], [1, 0], [1, 1], [2, 1]],
+    'tetro-z-0':     [[0, 0], [0, 1], [1, 1], [1, 2]],
+    'tetro-z-90':    [[0, 1], [1, 0], [1, 1], [2, 0]],
+    'rect-23-h':     [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]],
+    'rect-23-v':     [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]],
+  };
+
+  for (const [id, expected] of Object.entries(fixtures)) {
+    it(`${id} matches the approved preview layout`, () => {
+      const piece = pieceById(id);
+      expect(cellsAsSet(piece.cells)).toEqual(cellsAsSet(expected));
+    });
+  }
+
+  it('each family’s rotations are geometrically distinct', () => {
+    const families = ['tetro-t', 'tetro-l', 'tetro-j', 'tetro-s', 'tetro-z'];
+    for (const fam of families) {
+      const sigs = CATALOG.filter((p) => p.family === fam).map((p) =>
+        [...p.cells]
+          .map(([r, c]) => `${r},${c}`)
+          .sort()
+          .join('|') + `#${p.bbox.w}x${p.bbox.h}`,
+      );
+      expect(new Set(sigs).size).toBe(sigs.length);
+    }
+  });
+
+  it('J is the mirror of L and Z the mirror of S (not a rotation)', () => {
+    const mirror = (p: Piece) =>
+      new Set(p.cells.map(([r, c]) => `${r},${p.bbox.w - 1 - c}`));
+    expect(mirror(pieceById('tetro-l-0'))).toEqual(
+      cellsAsSet(pieceById('tetro-j-0').cells),
+    );
+    expect(mirror(pieceById('tetro-s-0'))).toEqual(
+      cellsAsSet(pieceById('tetro-z-0').cells),
+    );
+  });
 });

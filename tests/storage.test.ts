@@ -101,6 +101,24 @@ describe('last-game persistence', () => {
     expect(loadLastGame()).toBeNull();
   });
 
+  it('loadLastGame accepts a board cell carrying a new catalogue family', () => {
+    const board: Array<Array<string | null>> = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => null as string | null),
+    );
+    const firstRow = board[0];
+    if (firstRow) firstRow[0] = 'tetro-l'; // iteration-30 family
+    localStorage.setItem(
+      'blockly:lastGame',
+      JSON.stringify({
+        board,
+        trayIds: ['single', null, null],
+        score: 0,
+        streak: 0,
+      }),
+    );
+    expect(loadLastGame()).not.toBeNull();
+  });
+
   it('clearLastGame removes the key', () => {
     saveLastGame(sampleLastGame());
     expect(loadLastGame()).not.toBeNull();

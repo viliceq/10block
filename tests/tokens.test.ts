@@ -40,6 +40,15 @@ describe('tokens.css — piece-family colours', () => {
     expect(tokens).toMatch(/--color-piece-l2\s*:\s*#FACC15/i);
     expect(tokens).toMatch(/--color-piece-l3\s*:\s*#F472B6/i);
   });
+
+  it('declares one colour per new Tetris/Block-Blast family (iteration 30)', () => {
+    expect(tokens).toMatch(/--color-piece-tetro-t\s*:\s*#9333EA/i);
+    expect(tokens).toMatch(/--color-piece-tetro-l\s*:\s*#D97706/i);
+    expect(tokens).toMatch(/--color-piece-tetro-j\s*:\s*#2563EB/i);
+    expect(tokens).toMatch(/--color-piece-tetro-s\s*:\s*#16A34A/i);
+    expect(tokens).toMatch(/--color-piece-tetro-z\s*:\s*#EF4444/i);
+    expect(tokens).toMatch(/--color-piece-rect-23\s*:\s*#14B8A6/i);
+  });
 });
 
 describe('tokens.css — layout tokens', () => {

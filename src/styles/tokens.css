@@ -33,6 +33,14 @@
   --color-piece-l2:     #FACC15; /* yellow — small L corners */
   --color-piece-l3:     #F472B6; /* pink   — big L corners */
 
+  /* Modern Dark palette — Tetris / Block Blast families (iteration 30) */
+  --color-piece-tetro-t:  #9333EA; /* purple — T-tetromino */
+  --color-piece-tetro-l:  #D97706; /* amber  — L-tetromino */
+  --color-piece-tetro-j:  #2563EB; /* blue   — J-tetromino (L mirror) */
+  --color-piece-tetro-s:  #16A34A; /* green  — S-tetromino */
+  --color-piece-tetro-z:  #EF4444; /* red    — Z-tetromino (S mirror) */
+  --color-piece-rect-23:  #14B8A6; /* teal   — 2×3 rectangle */
+
   /* preview states */
   --color-preview-ok:  rgba(74, 222, 128, 0.35);
   --color-preview-bad: rgba(244, 63, 94, 0.35);

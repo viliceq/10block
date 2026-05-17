@@ -1,5 +1,5 @@
 import { createEmptyBoard, type BoardState, type CellState } from './engine';
-import type { PieceFamily } from './pieces';
+import { PIECE_FAMILIES } from './pieces';
 
 export type LastGame = {
   readonly board: BoardState;
@@ -12,14 +12,6 @@ const BEST_SCORE_KEY = 'blockly:bestScore';
 const LAST_GAME_KEY = 'blockly:lastGame';
 const MUTE_KEY = 'blockly:mute';
 
-const VALID_FAMILIES: ReadonlyArray<PieceFamily> = [
-  'single',
-  'line',
-  'sq2',
-  'sq3',
-  'l2',
-  'l3',
-];
 
 export function loadBestScore(): number {
   try {
@@ -94,7 +86,7 @@ function isValidLastGame(x: unknown): x is LastGame {
   for (const row of o['board']) {
     if (!Array.isArray(row) || row.length !== 10) return false;
     for (const cell of row) {
-      if (cell !== null && !VALID_FAMILIES.includes(cell)) return false;
+      if (cell !== null && !PIECE_FAMILIES.includes(cell)) return false;
     }
   }
   if (!Array.isArray(o['trayIds']) || o['trayIds'].length !== 3) return false;

@@ -64,10 +64,14 @@ Each piece carries a stable colour from one of six family slots so the player le
 | 3×3 Square | Square-3 | `--color-piece-sq3` | `#A78BFA` (violet) |
 | Small L | L2-NE / L2-SE / L2-SW / L2-NW | `--color-piece-l2` | `#FACC15` (yellow) |
 | Big L | L3-NE / L3-SE / L3-SW / L3-NW | `--color-piece-l3` | `#F472B6` (pink) |
+| T-tetromino | `tetro-t-{up,right,down,left}` | `--color-piece-tetro-t` | `#9333EA` (purple) |
+| L-tetromino | `tetro-l-{0,90,180,270}` | `--color-piece-tetro-l` | `#D97706` (amber) |
+| J-tetromino (L mirror) | `tetro-j-{0,90,180,270}` | `--color-piece-tetro-j` | `#2563EB` (blue) |
+| S-tetromino | `tetro-s-{0,90}` | `--color-piece-tetro-s` | `#16A34A` (green) |
+| Z-tetromino (S mirror) | `tetro-z-{0,90}` | `--color-piece-tetro-z` | `#EF4444` (red) |
+| 2×3 rectangle | `rect-23-{h,v}` | `--color-piece-rect-23` | `#14B8A6` (teal) |
 
-#### Extended catalog (post-v1, optional)
-
-T / S / Z tetrominoes in all four rotations. Off by default.
+The Tetris tetrominoes (T/L/J/S/Z) and the Block Blast 2×3 rectangle were added in iteration 30 (37 pieces total). Tetris **O** = `square-2`, Tetris **I** = the 4/5-cell line pieces.
 
 ### 3.3 Tray
 
