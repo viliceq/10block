@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>10Block — How to play</title>
+<style>
+  :root {
+    --bg: #0F172A;
+    --board: #1E293B;
+    --empty: #334155;
+    --text: #F1F5F9;
+    --radius: 6px;
+    --maxw: 760px;
+
+    --c-single: #38BDF8;
+    --c-line:   #4ADE80;
+    --c-sq2:    #F97316;
+    --c-sq3:    #A78BFA;
+    --c-l2:     #FACC15;
+    --c-l3:     #F472B6;
+    --c-tt:     #9333EA;
+    --c-tl:     #D97706;
+    --c-tj:     #2563EB;
+    --c-ts:     #16A34A;
+    --c-tz:     #EF4444;
+    --c-rect:   #14B8A6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.6;
+    padding:
+      max(20px, env(safe-area-inset-top))
+      max(20px, env(safe-area-inset-right))
+      max(40px, env(safe-area-inset-bottom))
+      max(20px, env(safe-area-inset-left));
+  }
+  main { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 34px; font-weight: 700; margin: 0 0 4px; letter-spacing: 0.02em; }
+  .tagline { opacity: 0.7; margin: 0 0 28px; font-size: 15px; }
+  h2 {
+    font-size: 21px; font-weight: 600; margin: 40px 0 12px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--empty);
+  }
+  h3 { font-size: 16px; font-weight: 600; margin: 22px 0 6px; }
+  p, li { font-size: 15.5px; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #00000040; padding: 2px 6px; border-radius: 4px; font-size: 14px;
+  }
+  .card {
+    background: var(--board); border-radius: 12px;
+    padding: 18px 22px; margin: 16px 0;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px;
+  }
+  th, td {
+    text-align: left; padding: 9px 12px;
+    border-bottom: 1px solid var(--empty);
+  }
+  th { font-weight: 600; opacity: 0.85; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px; margin: 16px 0 4px;
+  }
+  .fam {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    background: #0F172A66; border-radius: 8px; padding: 16px 10px 12px;
+    text-align: center;
+  }
+  .fam__art {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 56px;
+  }
+  .fam__shape { display: grid; gap: 3px; }
+  .fam__cell { width: 16px; height: 16px; border-radius: 3px; }
+  .fam__cell--on { background: var(--fc); }
+  .fam__cell--off { background: transparent; }
+  .fam__name { font-size: 13.5px; font-weight: 600; }
+  .fam__name small { display: block; opacity: 0.55; font-weight: 400; font-size: 12px; }
+  .formula {
+    background: #00000040; border-radius: 8px; padding: 14px 16px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px; line-height: 1.7; overflow-x: auto;
+  }
+  .example {
+    border-left: 3px solid var(--c-line); padding: 4px 0 4px 14px; margin: 12px 0;
+  }
+  .example .mono { background: none; padding: 0; }
+  .mini { display: grid; gap: 3px; margin: 10px 0; width: max-content; }
+  .mini .cell { width: 22px; height: 22px; border-radius: 4px; background: var(--empty); }
+  .mini .cell.on { background: var(--c-line); }
+  .footer { margin-top: 44px; opacity: 0.5; font-size: 13px; }
+  .pill {
+    display: inline-block; background: var(--empty); border-radius: 999px;
+    padding: 2px 10px; font-size: 13px; margin-left: 8px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>10Block <span class="pill">How to play</span></h1>
+  <p class="tagline">A free, open-source block-puzzle game. Drag pieces onto the grid, clear lines, build streaks.</p>
+
+  <h2>Goal</h2>
+  <p>
+    Place pieces onto a <strong>10 × 10 grid</strong>. Fill any complete row or
+    column to <strong>clear</strong> it and score. There is no timer and no
+    level — you play until no piece in the tray fits anywhere. Beat your best
+    score.
+  </p>
+
+  <h2>The pieces</h2>
+  <p>
+    You are always shown <strong>three pieces</strong> in the tray below the
+    board. The tray <strong>only refills once all three are placed</strong> —
+    plan the order. Pieces are drawn uniformly at random; they do not rotate.
+  </p>
+  <div class="card">
+    <h3 style="margin-top:0">Shape families</h3>
+    <p style="margin:0 0 6px; opacity:0.7; font-size:14px">
+      One example shown per family (each appears in every rotation in-game).
+    </p>
+    <div class="legend" id="families"></div>
+  </div>
+
+  <h2>Turn flow</h2>
+  <ol>
+    <li><strong>Drag</strong> a piece from the tray onto the board.</li>
+    <li>A drop is <strong>legal</strong> only if every cell lands on an empty,
+      in-bounds square. Illegal drops snap back to the tray.</li>
+    <li>On a legal drop the cells fill with the piece's colour and that tray
+      slot empties.</li>
+    <li>The engine immediately <strong>clears</strong> every fully filled row
+      <em>and</em> column — all at once. A square shared by a full row and a
+      full column clears once.</li>
+    <li>Your score updates (see below).</li>
+    <li>When all three slots are empty, the tray refills with three new pieces.</li>
+    <li>If no tray piece fits anywhere, the game is over.</li>
+  </ol>
+
+  <h2>Scoring</h2>
+
+  <h3>1 · Placement points</h3>
+  <p><strong>+1 point per cell</strong> of the piece, every time you place it —
+    whether or not it clears anything. A 3×3 square is <strong>+9</strong>.</p>
+
+  <h3>2 · Line-clear bonus</h3>
+  <p>Count <span class="mono">L</span> = rows cleared + columns cleared in that
+    single move, then add:</p>
+  <table>
+    <thead><tr><th class="num">L</th><th>Bonus</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td>0</td></tr>
+      <tr><td class="num">1</td><td>10</td></tr>
+      <tr><td class="num">2</td><td>30</td></tr>
+      <tr><td class="num">3</td><td>60</td></tr>
+      <tr><td class="num">4</td><td>120</td></tr>
+      <tr><td class="num">5</td><td>200</td></tr>
+      <tr><td class="num">6</td><td>300</td></tr>
+      <tr><td class="num">7+</td><td>300 + 50 × (L − 6)</td></tr>
+    </tbody>
+  </table>
+  <p>Clearing a row and a column in the same move counts as <span class="mono">L = 2</span>
+    (bonus 30) automatically — there is no separate cross bonus.</p>
+
+  <h3>3 · Combo streak multiplier</h3>
+  <p>
+    The <strong>streak</strong> counts consecutive placements that each cleared
+    at least one line. A placement that clears nothing resets it to 0. The
+    multiplier on the <em>line-clear bonus</em> is:
+  </p>
+  <div class="formula">multiplier = 1 + 0.25 × max(0, streak − 1)</div>
+  <p>
+    1st clearing move ×1.0, 2nd in a row ×1.25, 3rd ×1.5 … capped at
+    <strong>×3.0</strong> (after 9 in a row). The multiplier applies
+    <strong>only to the line-clear bonus</strong> — never to placement points
+    or the perfect-clear bonus.
+  </p>
+
+  <h3>4 · Perfect clear</h3>
+  <p>If the board is <strong>completely empty</strong> after a move, add a flat
+    <strong>+300</strong>. The streak multiplier does not apply to it.</p>
+
+  <h3>5 · The formula</h3>
+  <div class="formula">move score = cells_placed
+           + round( line_bonus(L) × multiplier(streak) )
+           + perfect_clear_bonus</div>
+  <p>Your total is the running sum of every move's score.</p>
+
+  <h3>Worked examples</h3>
+  <div class="example">
+    <p>2×2 square on an empty board, no clears:
+      <span class="mono">4 + 0 + 0 = <strong>4</strong></span></p>
+  </div>
+  <div class="example">
+    <p>A 1×5 line completes a row — first clear of the game:
+      <span class="mono">5 + round(10 × 1.0) + 0 = <strong>15</strong></span></p>
+  </div>
+  <div class="example">
+    <p>Next move completes one row <em>and</em> one column (3 cells, L = 2,
+      2nd consecutive clear):
+      <span class="mono">3 + round(30 × 1.25) + 0 = <strong>41</strong></span></p>
+  </div>
+  <div class="example">
+    <p>A move clears the last cells, leaving an empty board (L = 2, streak now 5):
+      <span class="mono">cells + round(30 × 2.0) + 300</span></p>
+  </div>
+
+  <h2>Game over</h2>
+  <p>
+    The game ends the moment <strong>none of the three tray pieces can be
+    legally placed anywhere</strong> on the board (checked after every
+    placement and refill). Empty slots — pieces you already placed — don't
+    count. Your final score is compared to your best, which is saved on this
+    device.
+  </p>
+
+  <h2>Tips</h2>
+  <ul>
+    <li>Look at <strong>all three</strong> pieces before placing the first —
+      the tray won't refill until all are down.</li>
+    <li>Keep clearing on consecutive moves to climb the streak multiplier;
+      one non-clearing move resets it to ×1.0.</li>
+    <li>A row and a column at once is worth more than two separate single
+      clears (L = 2 → 30, vs. two ×1.0 single clears → 10 + 10).</li>
+    <li>Leave room for the big pieces (3×3 square, 2×3 rectangle, 5-long lines).</li>
+  </ul>
+
+  <p class="footer">
+    10Block — free &amp; open source, all platforms, no ads, no accounts.
+    Rules current as of game v30.
+  </p>
+</main>
+
+<script>
+const FAMILIES = [
+  { name:'Single',        sub:'1×1',       c:'--c-single', w:1,h:1, cells:[[0,0]] },
+  { name:'Lines',         sub:'2–5 long',  c:'--c-line',   w:4,h:1, cells:[[0,0],[0,1],[0,2],[0,3]] },
+  { name:'2×2 square',    sub:'',          c:'--c-sq2',    w:2,h:2, cells:[[0,0],[0,1],[1,0],[1,1]] },
+  { name:'3×3 square',    sub:'',          c:'--c-sq3',    w:3,h:3, cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]] },
+  { name:'Small L',       sub:'corner',    c:'--c-l2',     w:2,h:2, cells:[[0,0],[1,0],[1,1]] },
+  { name:'Big L',         sub:'corner',    c:'--c-l3',     w:3,h:3, cells:[[0,0],[1,0],[2,0],[2,1],[2,2]] },
+  { name:'T-tetromino',   sub:'',          c:'--c-tt',     w:3,h:2, cells:[[0,1],[1,0],[1,1],[1,2]] },
+  { name:'L-tetromino',   sub:'',          c:'--c-tl',     w:2,h:3, cells:[[0,0],[1,0],[2,0],[2,1]] },
+  { name:'J-tetromino',   sub:'L mirror',  c:'--c-tj',     w:2,h:3, cells:[[0,1],[1,1],[2,1],[2,0]] },
+  { name:'S-tetromino',   sub:'',          c:'--c-ts',     w:3,h:2, cells:[[0,1],[0,2],[1,0],[1,1]] },
+  { name:'Z-tetromino',   sub:'S mirror',  c:'--c-tz',     w:3,h:2, cells:[[0,0],[0,1],[1,1],[1,2]] },
+  { name:'2×3 rectangle', sub:'',          c:'--c-rect',   w:3,h:2, cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]] },
+];
+
+const root = document.getElementById('families');
+for (const f of FAMILIES) {
+  const tile = document.createElement('div');
+  tile.className = 'fam';
+  tile.style.setProperty('--fc', `var(${f.c})`);
+
+  const art = document.createElement('div');
+  art.className = 'fam__art';
+  const shape = document.createElement('div');
+  shape.className = 'fam__shape';
+  shape.style.gridTemplateColumns = `repeat(${f.w}, 16px)`;
+  shape.style.gridTemplateRows = `repeat(${f.h}, 16px)`;
+  const on = new Set(f.cells.map(([r, c]) => r + ',' + c));
+  for (let r = 0; r < f.h; r++)
+    for (let c = 0; c < f.w; c++) {
+      const d = document.createElement('div');
+      d.className = 'fam__cell ' + (on.has(r + ',' + c) ? 'fam__cell--on' : 'fam__cell--off');
+      shape.appendChild(d);
+    }
+  art.appendChild(shape);
+
+  const name = document.createElement('div');
+  name.className = 'fam__name';
+  name.innerHTML = f.name + (f.sub ? ` <small>${f.sub}</small>` : '');
+
+  tile.appendChild(art);
+  tile.appendChild(name);
+  root.appendChild(tile);
+}
+</script>
+</body>
+</html>
