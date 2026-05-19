@@ -1,130 +1,77 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import { CELL_SIZE_FALLBACK } from '../src/drag';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const tokensPath = resolve(here, '../src/styles/tokens.css');
+import { readCss } from './helpers';
 
 let tokens = '';
-
 beforeAll(() => {
-  tokens = readFileSync(tokensPath, 'utf-8');
+  tokens = readCss('tokens.css');
 });
 
-describe('tokens.css — Modern Dark palette', () => {
-  it('declares the page background', () => {
-    expect(tokens).toMatch(/--color-bg\s*:\s*#0F172A/i);
+const numToken = (name: string): number => {
+  const m = tokens.match(new RegExp(`${name}\\s*:\\s*(\\d+)`, 'i'));
+  if (!m) throw new Error(`token ${name} not declared`);
+  return Number(m[1]);
+};
+
+describe('tokens.css', () => {
+  it('declares the Modern Dark surface colours', () => {
+    for (const [name, hex] of [
+      ['--color-bg', '#0F172A'],
+      ['--color-board', '#1E293B'],
+      ['--color-cell-empty', '#334155'],
+      ['--color-text', '#F1F5F9'],
+    ] as const) {
+      expect(tokens).toMatch(new RegExp(`${name}\\s*:\\s*${hex}`, 'i'));
+    }
   });
 
-  it('declares the board background', () => {
-    expect(tokens).toMatch(/--color-board\s*:\s*#1E293B/i);
+  it('declares one colour per piece family (all 12)', () => {
+    for (const [name, hex] of [
+      ['--color-piece-single', '#38BDF8'],
+      ['--color-piece-line', '#4ADE80'],
+      ['--color-piece-sq2', '#F97316'],
+      ['--color-piece-sq3', '#A78BFA'],
+      ['--color-piece-l2', '#FACC15'],
+      ['--color-piece-l3', '#F472B6'],
+      ['--color-piece-tetro-t', '#9333EA'],
+      ['--color-piece-tetro-l', '#D97706'],
+      ['--color-piece-tetro-j', '#2563EB'],
+      ['--color-piece-tetro-s', '#16A34A'],
+      ['--color-piece-tetro-z', '#EF4444'],
+      ['--color-piece-rect-23', '#14B8A6'],
+    ] as const) {
+      expect(tokens).toMatch(new RegExp(`${name}\\s*:\\s*${hex}`, 'i'));
+    }
   });
 
-  it('declares the empty-cell colour', () => {
-    expect(tokens).toMatch(/--color-cell-empty\s*:\s*#334155/i);
+  it('declares the required layout / z-index tokens', () => {
+    for (const name of [
+      '--cell-size', '--cell-gap', '--tray-cell-size', '--radius',
+      '--board-size', '--z-ghost', '--ghost-opacity', '--z-overlay',
+    ]) {
+      expect(tokens).toMatch(new RegExp(`${name}\\s*:`));
+    }
   });
 
-  it('declares the text colour', () => {
-    expect(tokens).toMatch(/--color-text\s*:\s*#F1F5F9/i);
-  });
-});
-
-describe('tokens.css — piece-family colours', () => {
-  it('declares one colour per family', () => {
-    expect(tokens).toMatch(/--color-piece-single\s*:\s*#38BDF8/i);
-    expect(tokens).toMatch(/--color-piece-line\s*:\s*#4ADE80/i);
-    expect(tokens).toMatch(/--color-piece-sq2\s*:\s*#F97316/i);
-    expect(tokens).toMatch(/--color-piece-sq3\s*:\s*#A78BFA/i);
-    expect(tokens).toMatch(/--color-piece-l2\s*:\s*#FACC15/i);
-    expect(tokens).toMatch(/--color-piece-l3\s*:\s*#F472B6/i);
+  it('holds the sizing & stacking invariants', () => {
+    // Tray cells are smaller than board cells.
+    expect(numToken('--tray-cell-size')).toBeLessThan(numToken('--cell-size'));
+    // z order: version badge > start gate > ghost.
+    expect(numToken('--z-version')).toBeGreaterThan(numToken('--z-start-gate'));
+    expect(numToken('--z-start-gate')).toBeGreaterThan(numToken('--z-ghost'));
   });
 
-  it('declares one colour per new Tetris/Block-Blast family (iteration 30)', () => {
-    expect(tokens).toMatch(/--color-piece-tetro-t\s*:\s*#9333EA/i);
-    expect(tokens).toMatch(/--color-piece-tetro-l\s*:\s*#D97706/i);
-    expect(tokens).toMatch(/--color-piece-tetro-j\s*:\s*#2563EB/i);
-    expect(tokens).toMatch(/--color-piece-tetro-s\s*:\s*#16A34A/i);
-    expect(tokens).toMatch(/--color-piece-tetro-z\s*:\s*#EF4444/i);
-    expect(tokens).toMatch(/--color-piece-rect-23\s*:\s*#14B8A6/i);
-  });
-});
-
-describe('tokens.css — layout tokens', () => {
-  it('declares the cell-size token', () => {
-    expect(tokens).toMatch(/--cell-size\s*:/);
+  it('is JS-derived with no width breakpoint (SPEC §8.3 / §8.9)', () => {
+    expect(tokens).not.toMatch(/@media\s*\(\s*max-width/i);
+    expect(tokens).toMatch(/--min-cell\s*:\s*28px/i);
+    expect(tokens).toMatch(/--tray-scale\s*:\s*0?\.5\b/i);
+    expect(tokens).toMatch(/--cell-gap\s*:\s*2px/i);
+    expect(tokens).toMatch(/--board-pad\s*:\s*6px/i);
+    expect(tokens).toMatch(/--screen-pad\s*:\s*12px/i);
+    expect(tokens).toMatch(/--board-size\s*:/);
   });
 
-  it('declares the cell-gap token', () => {
-    expect(tokens).toMatch(/--cell-gap\s*:/);
-  });
-
-  it('declares the tray-cell-size token', () => {
-    expect(tokens).toMatch(/--tray-cell-size\s*:/);
-  });
-
-  it('declares the radius token', () => {
-    expect(tokens).toMatch(/--radius\s*:/);
-  });
-
-  it('keeps --tray-cell-size smaller than --cell-size', () => {
-    const cell = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
-    const tray = tokens.match(/--tray-cell-size\s*:\s*(\d+)px/i);
-    expect(cell).not.toBeNull();
-    expect(tray).not.toBeNull();
-    expect(Number(tray?.[1])).toBeLessThan(Number(cell?.[1]));
-  });
-
-  it('declares the z-ghost and ghost-opacity tokens', () => {
-    expect(tokens).toMatch(/--z-ghost\s*:/);
-    expect(tokens).toMatch(/--ghost-opacity\s*:/);
-  });
-
-  it('declares the z-overlay token', () => {
-    expect(tokens).toMatch(/--z-overlay\s*:/);
-  });
-
-  it('declares --z-start-gate above --z-ghost', () => {
-    const sg = tokens.match(/--z-start-gate\s*:\s*(\d+)/i);
-    const gh = tokens.match(/--z-ghost\s*:\s*(\d+)/i);
-    expect(sg).not.toBeNull();
-    expect(gh).not.toBeNull();
-    expect(Number(sg?.[1])).toBeGreaterThan(Number(gh?.[1]));
-  });
-
-  it('declares --z-version above --z-start-gate (build always identifiable)', () => {
-    const ver = tokens.match(/--z-version\s*:\s*(\d+)/i);
-    const sg = tokens.match(/--z-start-gate\s*:\s*(\d+)/i);
-    expect(ver).not.toBeNull();
-    expect(sg).not.toBeNull();
-    expect(Number(ver?.[1])).toBeGreaterThan(Number(sg?.[1]));
-  });
-
-  describe('JS-derived sizing, no width breakpoint (SPEC §8.3 / §8.9)', () => {
-    it('has no max-width media query (sizing is aspect-driven, runtime)', () => {
-      expect(tokens).not.toMatch(/@media\s*\(\s*max-width/i);
-    });
-
-    it('declares the static --min-cell and --tray-scale tokens', () => {
-      expect(tokens).toMatch(/--min-cell\s*:\s*28px/i);
-      expect(tokens).toMatch(/--tray-scale\s*:\s*0?\.5\b/i);
-    });
-
-    it('declares the canonical static spacing tokens', () => {
-      expect(tokens).toMatch(/--cell-gap\s*:\s*2px/i);
-      expect(tokens).toMatch(/--board-pad\s*:\s*6px/i);
-      expect(tokens).toMatch(/--screen-pad\s*:\s*12px/i);
-    });
-
-    it('declares a --board-size first-paint fallback', () => {
-      expect(tokens).toMatch(/--board-size\s*:/);
-    });
-  });
-
-  it('keeps CELL_SIZE_FALLBACK in drag.ts in sync with --cell-size', () => {
-    const match = tokens.match(/--cell-size\s*:\s*(\d+)px/i);
-    expect(match).not.toBeNull();
-    expect(Number(match?.[1])).toBe(CELL_SIZE_FALLBACK);
+  it('keeps CELL_SIZE_FALLBACK in drag.ts in sync with the --cell-size fallback', () => {
+    expect(numToken('--cell-size')).toBe(CELL_SIZE_FALLBACK);
   });
 });

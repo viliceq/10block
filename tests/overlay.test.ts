@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import { createOverlay, renderOverlay } from '../src/overlay';
+import { readCss } from './helpers';
 
 describe('createOverlay()', () => {
   it('returns an HTMLElement with class "overlay" and data-visible="false"', () => {
@@ -45,11 +43,10 @@ describe('renderOverlay()', () => {
 });
 
 describe('overlay.css — fade-in', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/overlay.css'), 'utf-8');
+    css = readCss('overlay.css');
   });
 
   it('transitions opacity on the .overlay element', () => {

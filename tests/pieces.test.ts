@@ -6,6 +6,7 @@ import {
   type Piece,
   type PieceFamily,
 } from '../src/pieces';
+import { cellsAsSet } from './helpers';
 
 const expectedIds = [
   'single',
@@ -66,10 +67,6 @@ function pieceById(id: string): Piece {
   const piece = CATALOG.find((p) => p.id === id);
   if (!piece) throw new Error(`piece "${id}" not found in CATALOG`);
   return piece;
-}
-
-function cellsAsSet(cells: ReadonlyArray<readonly [number, number]>): Set<string> {
-  return new Set(cells.map(([r, c]) => `${r},${c}`));
 }
 
 describe('CATALOG', () => {

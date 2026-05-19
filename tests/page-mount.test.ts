@@ -1,108 +1,47 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { CATALOG } from '../src/pieces';
 import { APP_VERSION } from '../src/version';
 
+// Integration smoke only: proves `main.ts` wires the pieces together.
+// Each component's internals are owned by its own unit test
+// (board / tray / hud / overlay / start-gate / version).
 describe('main.ts entry point', () => {
   beforeAll(async () => {
     document.body.innerHTML = '<div id="app"></div>';
     await import('../src/main');
   });
 
-  it('mounts a board with 100 cells into #app', () => {
+  it('mounts the full app structure under #app', () => {
     const app = document.getElementById('app');
     expect(app).not.toBeNull();
-    expect(app?.querySelector('.board')).not.toBeNull();
     expect(app?.querySelectorAll('.board__cell').length).toBe(100);
+    expect(app?.querySelectorAll('.tray__slot').length).toBe(3);
+    expect(app?.querySelector('.hud')).not.toBeNull();
+    expect(
+      app?.querySelector<HTMLElement>('.overlay')?.dataset['visible'],
+    ).toBe('false');
+    expect(
+      app?.querySelector<HTMLElement>('.combo-callout')?.dataset['visible'],
+    ).toBe('false');
+    expect(
+      app?.querySelector<HTMLElement>('.start-gate')?.dataset['visible'],
+    ).toBe('true');
+    expect(app?.querySelector('.version')?.textContent).toBe(APP_VERSION);
   });
 
-  it('mounts a tray with three slots into #app', () => {
-    const app = document.getElementById('app');
-    const tray = app?.querySelector('.tray');
-    expect(tray).not.toBeNull();
-    expect(tray?.querySelectorAll('.tray__slot').length).toBe(3);
+  it('mounts HUD before board before tray (DOM order)', () => {
+    const children = Array.from(
+      document.getElementById('app')?.children ?? [],
+    );
+    const idx = (cls: string) =>
+      children.findIndex((c) => c.classList.contains(cls));
+    expect(idx('hud')).toBeGreaterThanOrEqual(0);
+    expect(idx('board')).toBeGreaterThan(idx('hud'));
+    expect(idx('tray')).toBeGreaterThan(idx('board'));
   });
 
-  it('renders a sampled piece into each tray slot', () => {
+  it('start gate dismisses when its button is clicked (wired to onStart)', () => {
     const app = document.getElementById('app');
-    const slots = app?.querySelectorAll<HTMLElement>('.tray__slot') ?? [];
-    expect(slots.length).toBe(3);
-    const validIds = new Set(CATALOG.map((p) => p.id));
-    for (const slot of slots) {
-      const id = slot.dataset['pieceId'];
-      expect(id, 'slot is missing data-piece-id').toBeDefined();
-      expect(validIds.has(id ?? '')).toBe(true);
-    }
-  });
-
-  it('mounts the board before the tray in DOM order', () => {
-    const app = document.getElementById('app');
-    const children = Array.from(app?.children ?? []);
-    const boardIndex = children.findIndex((c) => c.classList.contains('board'));
-    const trayIndex = children.findIndex((c) => c.classList.contains('tray'));
-    expect(boardIndex).toBeGreaterThanOrEqual(0);
-    expect(trayIndex).toBeGreaterThan(boardIndex);
-  });
-
-  it('mounts the HUD as the first child of #app, before the board', () => {
-    const app = document.getElementById('app');
-    const children = Array.from(app?.children ?? []);
-    const hudIndex = children.findIndex((c) => c.classList.contains('hud'));
-    const boardIndex = children.findIndex((c) => c.classList.contains('board'));
-    expect(hudIndex).toBeGreaterThanOrEqual(0);
-    expect(boardIndex).toBeGreaterThan(hudIndex);
-  });
-
-  it('initialises the HUD score to "0"', () => {
-    const app = document.getElementById('app');
-    expect(app?.querySelector('.hud__score')?.textContent).toBe('0');
-  });
-
-  it('mounts the overlay, hidden by default', () => {
-    const app = document.getElementById('app');
-    const overlay = app?.querySelector<HTMLElement>('.overlay');
-    expect(overlay).not.toBeNull();
-    expect(overlay?.dataset['visible']).toBe('false');
-  });
-
-  it('shows the BEST pair with value "0" on first mount', () => {
-    const app = document.getElementById('app');
-    const bestPair = app?.querySelector<HTMLElement>('.hud__pair--best');
-    expect(bestPair).not.toBeNull();
-    expect(bestPair?.querySelector('.hud__score')?.textContent).toBe('0');
-  });
-
-  it('mounts a mute button in the HUD', () => {
-    const app = document.getElementById('app');
-    const button = app?.querySelector<HTMLButtonElement>('.hud__mute');
-    expect(button).not.toBeNull();
-  });
-
-  it('mounts a combo callout hidden by default', () => {
-    const app = document.getElementById('app');
-    const callout = app?.querySelector<HTMLElement>('.combo-callout');
-    expect(callout).not.toBeNull();
-    expect(callout?.dataset['visible']).toBe('false');
-  });
-
-  it('mounts a visible start gate', () => {
-    const app = document.getElementById('app');
-    const gate = app?.querySelector<HTMLElement>('.start-gate');
-    expect(gate).not.toBeNull();
-    expect(gate?.dataset['visible']).toBe('true');
-  });
-
-  it('mounts a version badge showing the current version', () => {
-    const app = document.getElementById('app');
-    const badge = app?.querySelector<HTMLElement>('.version');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toBe(APP_VERSION);
-  });
-
-  it('hides the start gate when its button is clicked', () => {
-    const app = document.getElementById('app');
-    const btn = app?.querySelector<HTMLButtonElement>('.start-gate__button');
-    expect(btn).not.toBeNull();
-    btn?.click();
+    app?.querySelector<HTMLButtonElement>('.start-gate__button')?.click();
     expect(
       app?.querySelector<HTMLElement>('.start-gate')?.dataset['visible'],
     ).toBe('false');

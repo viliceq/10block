@@ -2,16 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createDrag, type DragApi } from '../src/drag';
 import { createGame, type GameApi } from '../src/game';
 import { canPlace, type CellState } from '../src/engine';
-
-function mulberry32(seed: number): () => number {
-  let t = seed >>> 0;
-  return () => {
-    t = (t + 0x6d2b79f5) >>> 0;
-    let x = Math.imul(t ^ (t >>> 15), 1 | t);
-    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { mulberry32, mountGame } from './helpers';
 
 type Harness = {
   game: GameApi;
@@ -21,14 +12,7 @@ type Harness = {
 };
 
 function setup(seed = 1): Harness {
-  document.body.innerHTML = '';
-  const root = document.createElement('div');
-  document.body.appendChild(root);
-  const game = createGame({ rng: mulberry32(seed) });
-  game.mount(root);
-  const trayEl = root.querySelector<HTMLElement>('.tray');
-  const boardEl = root.querySelector<HTMLElement>('.board');
-  if (!trayEl || !boardEl) throw new Error('mount failed');
+  const { game, trayEl, boardEl } = mountGame(seed, {}, true);
   const drag = createDrag(game, trayEl, boardEl);
   return { game, trayEl, boardEl, drag };
 }

@@ -1,15 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOG, samplePiece } from '../src/pieces';
-
-function mulberry32(seed: number): () => number {
-  let t = seed >>> 0;
-  return () => {
-    t = (t + 0x6d2b79f5) >>> 0;
-    let x = Math.imul(t ^ (t >>> 15), 1 | t);
-    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { mulberry32 } from './helpers';
 
 describe('samplePiece(rng)', () => {
   it('returns a piece that is referentially in CATALOG', () => {
@@ -47,6 +38,6 @@ describe('samplePiece(rng)', () => {
     const rng = mulberry32(7);
     for (let i = 0; i < 100; i++) samplePiece(rng);
     expect(CATALOG.map((p) => p.id)).toEqual(beforeIds);
-    expect(CATALOG.length).toBe(37);
+    expect(CATALOG.length).toBe(beforeIds.length);
   });
 });

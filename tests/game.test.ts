@@ -10,6 +10,7 @@ import {
   type BoardState,
   type CellState,
 } from '../src/engine';
+import { mulberry32 } from './helpers';
 
 function fullBoard(family: 'sq2' | 'sq3' | 'line' | 'l3' = 'sq2'): BoardState {
   return Array.from({ length: 10 }, () =>
@@ -17,16 +18,6 @@ function fullBoard(family: 'sq2' | 'sq3' | 'line' | 'l3' = 'sq2'): BoardState {
   );
 }
 
-
-function mulberry32(seed: number): () => number {
-  let t = seed >>> 0;
-  return () => {
-    t = (t + 0x6d2b79f5) >>> 0;
-    let x = Math.imul(t ^ (t >>> 15), 1 | t);
-    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function trayIds(game: GameApi): Array<string | null> {
   return game.trayPieces.map((p) => p?.id ?? null);

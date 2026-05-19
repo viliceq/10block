@@ -1,15 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { readCss } from './helpers';
 
 describe('combo.css — safe-area placement (SPEC §8.5 / §8.9)', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
   let base = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/combo.css'), 'utf-8');
+    css = readCss('combo.css');
     // The base `.combo-callout { ... }` rule (first block; not the keyframe).
     base = /\.combo-callout\s*\{([\s\S]*?)\}/.exec(css)?.[1] ?? '';
     expect(base).not.toBe('');

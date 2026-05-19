@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import { createBoard, renderBoardState } from '../src/board';
+import { readCss } from './helpers';
 import {
   createEmptyBoard,
   type BoardState,
@@ -189,11 +187,10 @@ describe('renderBoardState()', () => {
 });
 
 describe('board.css — placement animation', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+    css = readCss('board.css');
   });
 
   it('declares the cellAppear keyframes', () => {
@@ -214,11 +211,10 @@ describe('board.css — placement animation', () => {
 });
 
 describe('board.css — touch hygiene', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+    css = readCss('board.css');
   });
 
   it('disables text selection and the iOS callout', () => {
@@ -238,11 +234,10 @@ describe('board.css — touch hygiene', () => {
 });
 
 describe('board.css — safe area (SPEC §8.9)', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
+    css = readCss('board.css');
   });
 
   for (const side of ['top', 'right', 'bottom', 'left'] as const) {
@@ -261,13 +256,12 @@ describe('board.css — safe area (SPEC §8.9)', () => {
 });
 
 describe('board.css — orientation grid shell (SPEC §8.7)', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
   let css = '';
   let trayCss = '';
 
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/board.css'), 'utf-8');
-    trayCss = readFileSync(resolve(here, '../src/styles/tray.css'), 'utf-8');
+    css = readCss('board.css');
+    trayCss = readCss('tray.css');
   });
 
   it('makes #app a grid', () => {

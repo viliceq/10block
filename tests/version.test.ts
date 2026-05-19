@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { APP_VERSION, createVersionBadge } from '../src/version';
+import { readCss } from './helpers';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -36,7 +37,7 @@ describe('createVersionBadge()', () => {
 describe('version.css — safe-area placement', () => {
   let css = '';
   beforeAll(() => {
-    css = readFileSync(resolve(here, '../src/styles/version.css'), 'utf-8');
+    css = readCss('version.css');
   });
 
   it('anchors within the safe box (bottom/right fold env insets)', () => {
