@@ -7,7 +7,7 @@ import {
   streakMultiplier,
   type BoardState,
 } from './engine';
-import { findPieceById, samplePiece, type Piece } from './pieces';
+import { findPieceById, sampleTray, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
 import { createHud, renderBestScore, renderMute, renderScore } from './hud';
@@ -96,7 +96,7 @@ export function createGame(options: GameOptions = {}): GameApi {
   }
 
   function refillTray(): void {
-    tray = Array.from({ length: TRAY_SIZE }, () => samplePiece(rng));
+    tray = sampleTray(rng, TRAY_SIZE);
   }
 
   function updateGameOver(): void {

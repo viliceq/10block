@@ -8,6 +8,9 @@ The vocabulary used in `SPEC.md`, code, tests, commit messages, and ADRs. Keep t
 | **Cell** | One of 100 grid positions on the board; either `empty` or `filled`. |
 | **Piece** | A polyomino from the catalogue (SPEC §3.2). Has a fixed shape and a colour family. |
 | **Catalogue** | The 37 distinct pieces available in v1 (each rotation is a separate entry). |
+| **FAMILY_WEIGHTS** | Relative draw probability per family (iteration 32). Picked first by `samplePieceWeighted`; rotation then uniform within the chosen family. Replaces the uniform-over-37 bag so rotation-heavy/bulky families don't crowd out the small ones. |
+| **EASY_FAMILIES** | Small, near-always-placeable families (`single`, `sq2`, `l2`) used by `sampleTray`'s anti-frustration guarantee. |
+| **sampleTray** | Game-facing sampler: draws TRAY_SIZE pieces with `samplePieceWeighted` and guarantees ≥1 is from `EASY_FAMILIES` (replaces slot 0 with a uniform easy pick if not). Used by `refillTray`. |
 | **Family** | A group of pieces that share a colour. Twelve: Single, Lines, 2×2 Square, 3×3 Square, Small L (`l2`), Big L (`l3`), and the iteration-30 Tetris/Block-Blast set — T (`tetro-t`), L (`tetro-l`), J (`tetro-j`, L's mirror), S (`tetro-s`), Z (`tetro-z`, S's mirror), 2×3 rectangle (`rect-23`). |
 | **Tray** | The row of three pieces shown to the player. Refills only when all three have been placed. |
 | **Slot** | One of the three positions in the tray. |

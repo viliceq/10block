@@ -4,7 +4,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 import { createGame, TRAY_SIZE, type GameApi } from '../src/game';
-import { CATALOG, samplePiece } from '../src/pieces';
+import { CATALOG, sampleTray } from '../src/pieces';
 import {
   canPlace,
   type BoardState,
@@ -34,17 +34,14 @@ function findSafeAnchor(game: GameApi, slotIndex: number): readonly [number, num
   throw new Error(`no legal anchor for piece in slot ${slotIndex}`);
 }
 
-/** Brute-force a deterministic seed whose first TRAY_SIZE sampled pieces match
- *  `predicate`. Replays `samplePiece` directly (no Game construction) so the
- *  search is fast. */
+/** Brute-force a deterministic seed whose initial tray (as the game would
+ *  actually deal it via `sampleTray`) matches `predicate`. */
 function findSeedWithPieces(
   predicate: (ids: ReadonlyArray<string>) => boolean,
-  limit = 5000,
+  limit = 50000,
 ): number {
   for (let seed = 1; seed < limit; seed++) {
-    const rng = mulberry32(seed);
-    const ids: string[] = [];
-    for (let i = 0; i < TRAY_SIZE; i++) ids.push(samplePiece(rng).id);
+    const ids = sampleTray(mulberry32(seed), TRAY_SIZE).map((p) => p.id);
     if (predicate(ids)) return seed;
   }
   throw new Error(`no seed found within ${limit} tries`);
@@ -253,18 +250,28 @@ describe('Game — scoring', () => {
     expect(game.streak).toBe(0);
   });
 
+  // Helper: pick the slot indices that hold a penta-h in the current tray.
+  function pentaHSlots(game: GameApi): [number, number] {
+    const idx = game.trayPieces
+      .map((p, i) => (p?.id === 'penta-h' ? i : -1))
+      .filter((i) => i >= 0);
+    if (idx.length < 2) throw new Error('expected ≥2 penta-h in the tray');
+    return [idx[0]!, idx[1]!];
+  }
+
   it('SPEC §5.6 example: two penta-h that clear a row yield total 320', () => {
     const seed = findSeedWithPieces(
-      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+      (ids) => ids.filter((id) => id === 'penta-h').length >= 2,
     );
     const game = createGame({ rng: mulberry32(seed) });
     game.mount(document.createElement('div'));
+    const [a, b] = pentaHSlots(game);
 
-    game.place(0, 0, 0); // 5 cells, no clear → +5
+    game.place(a, 0, 0); // 5 cells, no clear → +5
     expect(game.score).toBe(5);
     expect(game.streak).toBe(0);
 
-    game.place(1, 0, 5); // 5 cells, L=1, streak→1, ×1.0, perfect-clear bonus
+    game.place(b, 0, 5); // 5 cells, L=1, streak→1, ×1.0, perfect-clear bonus
     // 5 (prev) + 5 (placement) + round(10 × 1.0) (bonus) + 300 (perfect) = 320.
     expect(game.score).toBe(320);
     expect(game.streak).toBe(1);
@@ -272,21 +279,23 @@ describe('Game — scoring', () => {
 
   it('resets streak to 0 after a non-clearing placement', () => {
     const seed = findSeedWithPieces(
-      ([a, b]) => a === 'penta-h' && b === 'penta-h',
+      (ids) => ids.filter((id) => id === 'penta-h').length >= 2,
     );
     const game = createGame({ rng: mulberry32(seed) });
     game.mount(document.createElement('div'));
+    const [a, b] = pentaHSlots(game);
+    const third = [0, 1, 2].find((i) => i !== a && i !== b)!;
 
-    game.place(0, 0, 0);
-    game.place(1, 0, 5); // perfect clear, streak=1
+    game.place(a, 0, 0);
+    game.place(b, 0, 5); // perfect clear, streak=1
     expect(game.streak).toBe(1);
 
-    const piece2 = game.trayPieces[2];
-    if (!piece2) throw new Error('no piece in slot 2');
-    const [r, c] = findSafeAnchor(game, 2);
+    const piece2 = game.trayPieces[third];
+    if (!piece2) throw new Error('no piece in third slot');
+    const [r, c] = findSafeAnchor(game, third);
     const scoreBefore = game.score;
 
-    game.place(2, r, c); // any piece on an empty board — single piece can't fill a 10-cell row/col
+    game.place(third, r, c);
 
     expect(game.streak).toBe(0);
     expect(game.score).toBe(scoreBefore + piece2.cells.length);

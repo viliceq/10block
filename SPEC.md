@@ -76,7 +76,8 @@ The Tetris tetrominoes (T/L/J/S/Z) and the Block Blast 2×3 rectangle were added
 ### 3.3 Tray
 
 - The player is shown **three pieces in a tray** below the board.
-- Pieces in the tray are sampled uniformly at random from the catalog **with replacement** at refill time (no anti-frustration weighting in v1; we can tune later if needed).
+- Pieces are dealt by a **family-weighted sampler** (iteration 32, supersedes the original uniform-over-37 bag): one of the 12 families is picked according to `FAMILY_WEIGHTS` (small/line pieces common, big/awkward pieces rare), then a rotation is picked uniformly within that family. Rotation-heavy families therefore do not dominate the bag just by having more catalogue entries.
+- **Anti-frustration guarantee.** At least one of the three tray pieces is from an `EASY_FAMILIES` member (`single`, `sq2`, `l2`) — small, near-always-placeable shapes. If a draw of three contains none, slot 0 is replaced with a uniform pick from the easy pool.
 - The tray only refills when **all three pieces have been placed**. The player must place all three before the next set appears.
 - Each piece may be placed exactly once per refill.
 
@@ -342,7 +343,7 @@ The game is shippable when **all** of the following hold:
 
 ## 13. Open Questions
 
-- **Piece distribution:** pure uniform random can produce frustrating tray combinations (three 3×3 squares). Do we want anti-frustration weighting in v1 (e.g. ensure at least one of the three pieces is small)? Default: no, revisit after first playtest.
+- ~~**Piece distribution:** pure uniform random can produce frustrating tray combinations~~ → **resolved in iteration 32** (§3.3): family-weighted sampler + at-least-one-easy guarantee. Specific weights are intentionally tunable.
 - **High score reset:** should there be a UI to clear the best score? Default: no; advanced users can clear site data.
 
 ## 14. Engineering principles (cross-reference)
