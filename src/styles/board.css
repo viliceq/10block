@@ -67,7 +67,8 @@ body {
  * binder-derived --board-size as an explicit length — never the #app grid's
  * intrinsic min-content, which WebKit fails to recompute on an
  * orientation round-trip (the tray collapsed to the pieces' width). */
-#app[data-orientation='portrait'] .tray {
+#app[data-orientation='portrait'] .tray,
+#app[data-orientation='portrait'] .hud {
   width: var(--board-size);
   box-sizing: border-box;
 }

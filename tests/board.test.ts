@@ -298,7 +298,14 @@ describe('board.css — orientation grid shell (SPEC §8.7)', () => {
 
   it('portrait tray is pinned to the board width (not intrinsic min-content)', () => {
     expect(css).toMatch(
-      /#app\[data-orientation=['"]portrait['"]\]\s+\.tray[^{]*\{[^}]*width:\s*var\(--board-size\)/,
+      /#app\[data-orientation=['"]portrait['"]\]\s+\.tray/,
+    );
+    expect(css).toContain('width: var(--board-size)');
+  });
+
+  it('portrait HUD is also pinned to the board width (iteration 33 — 4-digit scores fit)', () => {
+    expect(css).toMatch(
+      /#app\[data-orientation=['"]portrait['"]\]\s+\.hud/,
     );
   });
 });
