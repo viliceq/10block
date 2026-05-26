@@ -109,8 +109,11 @@ export function createAudio(): AudioApi {
     }
   }
 
+  // iOS re-suspends the context every time the page is backgrounded (phone
+  // lock, app switch). On return we must call resume() again from a user
+  // gesture — so the `unlocked` latch only gates the one-shot silent prime,
+  // never the resume itself.
   function ensureUnlocked(): void {
-    if (unlocked) return;
     if (ctx.state === 'suspended') {
       void ctx.resume().then(primeIfRunning, () => {
         // resume() rejected (no gesture yet) — a later gesture retries.

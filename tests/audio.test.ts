@@ -159,6 +159,31 @@ describe('createAudio() — context resume', () => {
     audio.pickup();
     expect(s.resume).toHaveBeenCalled();
   });
+
+  it('re-resumes after the context is re-suspended (iOS backgrounding)', async () => {
+    // iOS suspends the AudioContext when the page hides (phone lock, app
+    // switch). After the first unlock latches `unlocked = true`, the next
+    // gesture must still call resume() — otherwise events fire into a
+    // silent, suspended context.
+    const s = spies();
+    let instance: { state: 'suspended' | 'running' | 'closed' } | null = null;
+    s.resume.mockImplementation(function (this: typeof instance & object) {
+      instance = this as NonNullable<typeof instance>;
+      instance.state = 'running';
+      return Promise.resolve();
+    });
+    const audio = createAudio();
+    audio.unlock();
+    await flushBufferLoad(); // first prime settled; `unlocked` latched
+    expect(instance).not.toBeNull();
+    s.resume.mockClear();
+
+    // Simulate iOS putting the page in background → context suspends again.
+    instance!.state = 'suspended';
+
+    audio.pickup();
+    expect(s.resume).toHaveBeenCalled();
+  });
 });
 
 describe('createAudio() — haptics', () => {
